@@ -2,10 +2,19 @@
 package queue
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/chenjianyu/collections/container/common"
+)
+
+var (
+	// ErrEmptyQueue 表示队列为空错误
+	ErrEmptyQueue = errors.New("queue is empty")
+
+	// ErrFullQueue 表示队列已满错误
+	ErrFullQueue = errors.New("queue is full")
 )
 // PriorityQueue 是一个基于二叉堆的优先队列实现
 // 默认为最小堆，可以通过提供自定义比较器来创建最大堆
