@@ -1,51 +1,51 @@
-// Package list 提供列表数据结构的实现
+// Package list provides implementations of list data structures
 package list
 
 import (
 	"github.com/chenjianyu/collections/container/common"
 )
 
-// List 表示有序的元素集合，允许重复元素
+// List represents an ordered collection of elements that allows duplicates
 type List[E any] interface {
 	common.Container[E]
 	common.Iterable[E]
 
-	// Add 添加元素到列表末尾
-	// 返回是否成功添加
-	Add(e E) bool
+	// Add adds an element to the end of the list
+	// Returns whether the addition was successful
+	Add(element E) bool
 
-	// Insert 在指定位置插入元素
-	// 如果索引无效，返回错误
-	Insert(index int, e E) error
+	// Insert inserts an element at the specified position
+	// Returns an error if the index is invalid
+	Insert(index int, element E) error
 
-	// Get 获取指定索引的元素
-	// 如果索引无效，返回零值和错误
+	// Get retrieves the element at the specified index
+	// Returns the zero value and an error if the index is invalid
 	Get(index int) (E, error)
 
-	// Set 替换指定索引的元素
-	// 返回被替换的元素和是否成功
-	Set(index int, e E) (E, error)
+	// Set replaces the element at the specified index
+	// Returns the replaced element and whether the operation was successful
+	Set(index int, element E) (E, bool)
 
-	// RemoveAt 移除指定索引的元素
-	// 返回被移除的元素和是否成功
-	RemoveAt(index int) (E, error)
+	// RemoveAt removes the element at the specified index
+	// Returns the removed element and whether the operation was successful
+	RemoveAt(index int) (E, bool)
 
-	// Remove 移除第一个匹配的元素
-	// 返回是否成功移除
-	Remove(e E) bool
+	// Remove removes the first occurrence of the specified element
+	// Returns whether the removal was successful
+	Remove(element E) bool
 
-	// IndexOf 返回指定元素在列表中第一次出现的索引
-	// 如果不存在，返回-1
-	IndexOf(e E) int
+	// IndexOf returns the index of the first occurrence of the specified element in the list
+	// Returns -1 if not found
+	IndexOf(element E) int
 
-	// LastIndexOf 返回指定元素在列表中最后一次出现的索引
-	// 如果不存在，返回-1
-	LastIndexOf(e E) int
+	// LastIndexOf returns the index of the last occurrence of the specified element in the list
+	// Returns -1 if not found
+	LastIndexOf(element E) int
 
-	// SubList 返回列表中指定范围的视图
-	// 如果索引无效，返回错误
+	// SubList returns a view of the specified range in the list
+	// Returns an error if the indices are invalid
 	SubList(fromIndex, toIndex int) (List[E], error)
 
-	// ToSlice 返回包含列表所有元素的切片
+	// ToSlice returns a slice containing all elements in the list
 	ToSlice() []E
 }

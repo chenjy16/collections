@@ -1,217 +1,232 @@
-// Package queue 提供队列数据结构的实现
+// Package queue provides queue data structure implementations
 package queue
 
 import (
 	"github.com/chenjianyu/collections/container/list"
 )
 
-// LinkedList 是一个基于双向链表的Deque实现，复用list包中的LinkedList
-type LinkedList[E comparable] struct {
+// LinkedList is a Deque implementation based on doubly linked list, reusing LinkedList from list package
+type LinkedList[E any] struct {
 	list   *list.LinkedList[E]
-	maxCap int // 最大容量，0表示无界
+	maxCap int // maximum capacity, 0 means unbounded
 }
 
-// New 创建一个新的无界LinkedList
-func New[E comparable]() *LinkedList[E] {
+// New creates a new unbounded LinkedList
+func New[E any]() *LinkedList[E] {
 	return &LinkedList[E]{
 		list:   list.NewLinkedList[E](),
 		maxCap: 0,
 	}
 }
 
-// WithCapacity 创建一个具有指定最大容量的LinkedList
-func WithCapacity[E comparable](maxCapacity int) *LinkedList[E] {
+// WithCapacity creates a LinkedList with specified maximum capacity
+func WithCapacity[E any](capacity int) *LinkedList[E] {
 	return &LinkedList[E]{
 		list:   list.NewLinkedList[E](),
-		maxCap: maxCapacity,
+		maxCap: capacity,
 	}
 }
 
-// FromSlice 从切片创建一个新的LinkedList
-func FromSlice[E comparable](elements []E) *LinkedList[E] {
-	queue := New[E]()
-	for _, e := range elements {
-		queue.Add(e)
+// FromSlice creates a new LinkedList from a slice
+func FromSlice[E any](slice []E) *LinkedList[E] {
+	ll := New[E]()
+	for _, item := range slice {
+		ll.list.Add(item)
 	}
-	return queue
+	return ll
 }
 
-// Size 返回队列中的元素数量
-func (queue *LinkedList[E]) Size() int {
-	return queue.list.Size()
+// Size returns the number of elements in the queue
+func (ll *LinkedList[E]) Size() int {
+	return ll.list.Size()
 }
 
-// IsEmpty 检查队列是否为空
-func (queue *LinkedList[E]) IsEmpty() bool {
-	return queue.list.IsEmpty()
+// IsEmpty checks if the queue is empty
+func (ll *LinkedList[E]) IsEmpty() bool {
+	return ll.list.IsEmpty()
 }
 
-// isFull 检查队列是否已满
-func (queue *LinkedList[E]) isFull() bool {
-	return queue.maxCap > 0 && queue.list.Size() >= queue.maxCap
+// isFull checks if the queue is full
+func (ll *LinkedList[E]) isFull() bool {
+	return ll.maxCap > 0 && ll.list.Size() >= ll.maxCap
 }
 
-// Clear 清空队列
-func (queue *LinkedList[E]) Clear() {
-	queue.list.Clear()
+// Clear clears the queue
+func (ll *LinkedList[E]) Clear() {
+	ll.list.Clear()
 }
 
-// Contains 检查队列是否包含指定元素
-func (queue *LinkedList[E]) Contains(e E) bool {
-	return queue.list.Contains(e)
+// Contains checks if the queue contains the specified element
+func (ll *LinkedList[E]) Contains(element E) bool {
+	return ll.list.Contains(element)
 }
 
-// ForEach 对队列中的每个元素执行给定的操作
-func (queue *LinkedList[E]) ForEach(f func(E)) {
-	queue.list.ForEach(f)
+// ForEach executes the given operation for each element in the queue
+func (ll *LinkedList[E]) ForEach(fn func(E)) {
+	ll.list.ForEach(fn)
 }
 
-// String 返回队列的字符串表示
-func (queue *LinkedList[E]) String() string {
-	return queue.list.String()
+// String returns the string representation of the queue
+func (ll *LinkedList[E]) String() string {
+	return ll.list.String()
 }
 
-// Add 将元素添加到队列尾部
-func (queue *LinkedList[E]) Add(e E) error {
-	if queue.isFull() {
+// Add adds an element to the tail of the queue
+func (ll *LinkedList[E]) Add(element E) error {
+	if ll.isFull() {
 		return ErrFullQueue
 	}
-
-	queue.list.AddLast(e)
+	ll.list.Add(element)
 	return nil
 }
 
-// Offer 将元素添加到队列尾部
-func (queue *LinkedList[E]) Offer(e E) bool {
-	if queue.isFull() {
+// Offer adds an element to the tail of the queue
+func (ll *LinkedList[E]) Offer(element E) bool {
+	if ll.isFull() {
 		return false
 	}
-
-	queue.list.AddLast(e)
+	ll.list.Add(element)
 	return true
 }
 
-// Remove 移除并返回队列头部的元素
-func (queue *LinkedList[E]) Remove() (E, error) {
-	return queue.RemoveFirst()
+// Remove removes and returns the element at the head of the queue
+func (ll *LinkedList[E]) Remove() (E, error) {
+	if ll.IsEmpty() {
+		var zero E
+		return zero, ErrEmptyQueue
+	}
+	val, success := ll.list.RemoveFirst()
+	if !success {
+		var zero E
+		return zero, ErrEmptyQueue
+	}
+	return val, nil
 }
 
-// Poll 移除并返回队列头部的元素
-func (queue *LinkedList[E]) Poll() (E, bool) {
-	return queue.PollFirst()
+// Poll removes and returns the element at the head of the queue
+func (ll *LinkedList[E]) Poll() (E, bool) {
+	val, success := ll.list.RemoveFirst()
+	return val, success
 }
 
-// Element 返回队列头部的元素，但不移除
-func (queue *LinkedList[E]) Element() (E, error) {
-	return queue.GetFirst()
+// Element returns the element at the head of the queue without removing it
+func (ll *LinkedList[E]) Element() (E, error) {
+	return ll.list.GetFirst()
 }
 
-// Peek 返回队列头部的元素，但不移除
-func (queue *LinkedList[E]) Peek() (E, bool) {
-	return queue.PeekFirst()
+// Peek returns the element at the head of the queue without removing it
+func (ll *LinkedList[E]) Peek() (E, bool) {
+	val, err := ll.list.GetFirst()
+	return val, err == nil
 }
 
-// AddFirst 将元素添加到队列头部
-func (queue *LinkedList[E]) AddFirst(e E) error {
-	if queue.isFull() {
+// AddFirst adds an element to the head of the queue
+func (ll *LinkedList[E]) AddFirst(element E) error {
+	if ll.isFull() {
 		return ErrFullQueue
 	}
-
-	queue.list.AddFirst(e)
+	ll.list.AddFirst(element)
 	return nil
 }
 
-// AddLast 将元素添加到队列尾部
-func (queue *LinkedList[E]) AddLast(e E) error {
-	if queue.isFull() {
+// AddLast adds an element to the tail of the queue
+func (ll *LinkedList[E]) AddLast(element E) error {
+	if ll.isFull() {
 		return ErrFullQueue
 	}
-
-	queue.list.AddLast(e)
+	ll.list.AddLast(element)
 	return nil
 }
 
-// OfferFirst 将元素添加到队列头部
-func (queue *LinkedList[E]) OfferFirst(e E) bool {
-	if queue.isFull() {
+// OfferFirst adds an element to the head of the queue
+func (ll *LinkedList[E]) OfferFirst(element E) bool {
+	if ll.isFull() {
 		return false
 	}
-
-	queue.list.AddFirst(e)
+	ll.list.AddFirst(element)
 	return true
 }
 
-// OfferLast 将元素添加到队列尾部
-func (queue *LinkedList[E]) OfferLast(e E) bool {
-	if queue.isFull() {
+// OfferLast adds an element to the tail of the queue
+func (ll *LinkedList[E]) OfferLast(element E) bool {
+	if ll.isFull() {
 		return false
 	}
-
-	queue.list.AddLast(e)
+	ll.list.AddLast(element)
 	return true
 }
 
-// RemoveFirst 移除并返回队列头部的元素
-func (queue *LinkedList[E]) RemoveFirst() (E, error) {
-	if queue.IsEmpty() {
-		return *new(E), ErrEmptyQueue
+// RemoveFirst removes and returns the element at the head of the queue
+func (ll *LinkedList[E]) RemoveFirst() (E, error) {
+	if ll.IsEmpty() {
+		var zero E
+		return zero, ErrEmptyQueue
 	}
-
-	return queue.list.RemoveFirst()
-}
-
-// RemoveLast 移除并返回队列尾部的元素
-func (queue *LinkedList[E]) RemoveLast() (E, error) {
-	if queue.IsEmpty() {
-		return *new(E), ErrEmptyQueue
+	val, success := ll.list.RemoveFirst()
+	if !success {
+		var zero E
+		return zero, ErrEmptyQueue
 	}
-
-	return queue.list.RemoveLast()
+	return val, nil
 }
 
-// PollFirst 移除并返回队列头部的元素
-func (queue *LinkedList[E]) PollFirst() (E, bool) {
-	value, err := queue.RemoveFirst()
-	return value, err == nil
-}
-
-// PollLast 移除并返回队列尾部的元素
-func (queue *LinkedList[E]) PollLast() (E, bool) {
-	value, err := queue.RemoveLast()
-	return value, err == nil
-}
-
-// GetFirst 返回队列头部的元素，但不移除
-func (queue *LinkedList[E]) GetFirst() (E, error) {
-	if queue.IsEmpty() {
-		return *new(E), ErrEmptyQueue
+// RemoveLast removes and returns the element at the tail of the queue
+func (ll *LinkedList[E]) RemoveLast() (E, error) {
+	if ll.IsEmpty() {
+		var zero E
+		return zero, ErrEmptyQueue
 	}
-
-	return queue.list.GetFirst()
-}
-
-// GetLast 返回队列尾部的元素，但不移除
-func (queue *LinkedList[E]) GetLast() (E, error) {
-	if queue.IsEmpty() {
-		return *new(E), ErrEmptyQueue
+	val, success := ll.list.RemoveLast()
+	if !success {
+		var zero E
+		return zero, ErrEmptyQueue
 	}
-
-	return queue.list.GetLast()
+	return val, nil
 }
 
-// PeekFirst 返回队列头部的元素，但不移除
-func (queue *LinkedList[E]) PeekFirst() (E, bool) {
-	value, err := queue.GetFirst()
-	return value, err == nil
+// PollFirst removes and returns the element at the head of the queue
+func (ll *LinkedList[E]) PollFirst() (E, bool) {
+	val, err := ll.RemoveFirst()
+	return val, err == nil
 }
 
-// PeekLast 返回队列尾部的元素，但不移除
-func (queue *LinkedList[E]) PeekLast() (E, bool) {
-	value, err := queue.GetLast()
-	return value, err == nil
+// PollLast removes and returns the element at the tail of the queue
+func (ll *LinkedList[E]) PollLast() (E, bool) {
+	val, err := ll.RemoveLast()
+	return val, err == nil
 }
 
-// ToSlice 返回包含队列所有元素的切片
-func (queue *LinkedList[E]) ToSlice() []E {
-	return queue.list.ToSlice()
+// GetFirst returns the element at the head of the queue without removing it
+func (ll *LinkedList[E]) GetFirst() (E, error) {
+	if ll.IsEmpty() {
+		var zero E
+		return zero, ErrEmptyQueue
+	}
+	return ll.list.GetFirst()
+}
+
+// GetLast returns the element at the tail of the queue without removing it
+func (ll *LinkedList[E]) GetLast() (E, error) {
+	if ll.IsEmpty() {
+		var zero E
+		return zero, ErrEmptyQueue
+	}
+	return ll.list.GetLast()
+}
+
+// PeekFirst returns the element at the head of the queue without removing it
+func (ll *LinkedList[E]) PeekFirst() (E, bool) {
+	val, err := ll.GetFirst()
+	return val, err == nil
+}
+
+// PeekLast returns the element at the tail of the queue without removing it
+func (ll *LinkedList[E]) PeekLast() (E, bool) {
+	val, err := ll.GetLast()
+	return val, err == nil
+}
+
+// ToSlice returns a slice containing all elements in the queue
+func (ll *LinkedList[E]) ToSlice() []E {
+	return ll.list.ToSlice()
 }

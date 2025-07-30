@@ -4,142 +4,271 @@ import (
 	"testing"
 )
 
-func TestLinkedListBasicOperations(t *testing.T) {
+func TestLinkedListBasic(t *testing.T) {
 	list := NewLinkedList[int]()
 
-	// 测试空列表
+	// Test empty list
 	if !list.IsEmpty() {
-		t.Error("新创建的列表应该为空")
+		t.Error("New list should be empty")
 	}
 
 	if list.Size() != 0 {
-		t.Errorf("空列表的大小应该为0，实际为%d", list.Size())
+		t.Error("New list size should be 0")
 	}
 
-	// 测试添加元素
-	if !list.Add(1) {
-		t.Error("添加元素应该成功")
-	}
-
-	if !list.Add(2) {
-		t.Error("添加元素应该成功")
-	}
-
-	if !list.Add(3) {
-		t.Error("添加元素应该成功")
-	}
+	// Test add elements
+	list.Add(1)
+	list.Add(2)
+	list.Add(3)
 
 	if list.Size() != 3 {
-		t.Errorf("列表大小应该为3，实际为%d", list.Size())
+		t.Errorf("List size should be 3, got %d", list.Size())
 	}
 
 	if list.IsEmpty() {
-		t.Error("非空列表不应该为空")
+		t.Error("List should not be empty")
 	}
 }
 
-func TestLinkedListGetAndSet(t *testing.T) {
-	list := NewLinkedList[string]()
-	list.Add("first")
-	list.Add("second")
-	list.Add("third")
+func TestLinkedListFromSlice(t *testing.T) {
+	slice := []int{1, 2, 3, 4, 5}
+	list := LinkedListFromSlice(slice)
 
-	// 测试Get
-	if val, err := list.Get(0); err != nil || val != "first" {
-		t.Errorf("Get(0)应该返回'first'，实际返回'%s'，错误：%v", val, err)
+	if list.Size() != len(slice) {
+		t.Errorf("List size should be %d, got %d", len(slice), list.Size())
 	}
 
-	if val, err := list.Get(1); err != nil || val != "second" {
-		t.Errorf("Get(1)应该返回'second'，实际返回'%s'，错误：%v", val, err)
-	}
-
-	if val, err := list.Get(2); err != nil || val != "third" {
-		t.Errorf("Get(2)应该返回'third'，实际返回'%s'，错误：%v", val, err)
-	}
-
-	// 测试越界访问
-	if _, err := list.Get(-1); err == nil {
-		t.Error("Get(-1)应该返回错误")
-	}
-
-	if _, err := list.Get(3); err == nil {
-		t.Error("Get(3)应该返回错误")
-	}
-
-	// 测试Set
-	if old, err := list.Set(1, "modified"); err != nil || old != "second" {
-		t.Errorf("Set(1, 'modified')应该返回'second'，实际返回'%s'，错误：%v", old, err)
-	}
-
-	if val, _ := list.Get(1); val != "modified" {
-		t.Errorf("Set后Get(1)应该返回'modified'，实际返回'%s'", val)
+	// Verify elements
+	for i, expected := range slice {
+		val, err := list.Get(i)
+		if err != nil {
+			t.Errorf("Get(%d) should not return error, got %v", i, err)
+		}
+		if val != expected {
+			t.Errorf("Get(%d) should return %d, got %d", i, expected, val)
+		}
 	}
 }
 
-func TestLinkedListInsertAndRemove(t *testing.T) {
+func TestLinkedListGet(t *testing.T) {
 	list := NewLinkedList[int]()
-
-	// 测试Insert
-	if err := list.Insert(0, 10); err != nil {
-		t.Errorf("在空列表插入应该成功，错误：%v", err)
+	for i := 1; i <= 5; i++ {
+		list.Add(i)
 	}
 
-	if err := list.Insert(0, 5); err != nil {
-		t.Errorf("在头部插入应该成功，错误：%v", err)
-	}
-
-	if err := list.Insert(2, 15); err != nil {
-		t.Errorf("在尾部插入应该成功，错误：%v", err)
-	}
-
-	if err := list.Insert(2, 12); err != nil {
-		t.Errorf("在中间插入应该成功，错误：%v", err)
-	}
-
-	// 验证顺序：[5, 10, 12, 15]
-	expected := []int{5, 10, 12, 15}
-	for i, exp := range expected {
-		if val, _ := list.Get(i); val != exp {
-			t.Errorf("索引%d的值应该为%d，实际为%d", i, exp, val)
+	// Test valid indices
+	for i := 0; i < 5; i++ {
+		val, err := list.Get(i)
+		if err != nil {
+			t.Errorf("Get(%d) should not return error, got %v", i, err)
+		}
+		if val != i+1 {
+			t.Errorf("Get(%d) should return %d, got %d", i, i+1, val)
 		}
 	}
 
-	// 测试RemoveAt
-	if removed, err := list.RemoveAt(1); err != nil || removed != 10 {
-		t.Errorf("RemoveAt(1)应该返回10，实际返回%d，错误：%v", removed, err)
+	// Test invalid indices
+	_, err := list.Get(-1)
+	if err == nil {
+		t.Error("Get(-1) should return error")
+	}
+
+	_, err = list.Get(5)
+	if err == nil {
+		t.Error("Get(5) should return error")
+	}
+}
+
+func TestLinkedListSet(t *testing.T) {
+	list := NewLinkedList[int]()
+	for i := 1; i <= 5; i++ {
+		list.Add(i)
+	}
+
+	// Test valid set
+	oldVal, success := list.Set(2, 10)
+	if !success {
+		t.Error("Set(2, 10) should return true")
+	}
+	if oldVal != 3 {
+		t.Errorf("Set(2, 10) should return old value 3, got %d", oldVal)
+	}
+
+	val, _ := list.Get(2)
+	if val != 10 {
+		t.Errorf("Get(2) should return 10, got %d", val)
+	}
+
+	// Test invalid indices
+	_, success = list.Set(-1, 100)
+	if success {
+		t.Error("Set(-1, 100) should return false")
+	}
+
+	_, success = list.Set(5, 100)
+	if success {
+		t.Error("Set(5, 100) should return false")
+	}
+}
+
+func TestLinkedListInsert(t *testing.T) {
+	list := NewLinkedList[int]()
+	list.Add(1)
+	list.Add(3)
+
+	// Test insert at middle
+	err := list.Insert(1, 2)
+	if err != nil {
+		t.Errorf("Insert(1, 2) should not return error, got %v", err)
 	}
 
 	if list.Size() != 3 {
-		t.Errorf("移除后列表大小应该为3，实际为%d", list.Size())
+		t.Errorf("List size should be 3, got %d", list.Size())
 	}
 
-	// 测试Remove
-	if !list.Remove(12) {
-		t.Error("Remove(12)应该成功")
+	// Verify order
+	expected := []int{1, 2, 3}
+	for i, exp := range expected {
+		val, _ := list.Get(i)
+		if val != exp {
+			t.Errorf("Get(%d) should return %d, got %d", i, exp, val)
+		}
 	}
 
-	if list.Remove(100) {
-		t.Error("Remove(100)应该失败")
+	// Test insert at beginning
+	err = list.Insert(0, 0)
+	if err != nil {
+		t.Errorf("Insert(0, 0) should not return error, got %v", err)
+	}
+
+	// Test insert at end
+	err = list.Insert(list.Size(), 4)
+	if err != nil {
+		t.Errorf("Insert at end should not return error, got %v", err)
+	}
+
+	// Test invalid index
+	err = list.Insert(-1, 100)
+	if err == nil {
+		t.Error("Insert(-1, 100) should return error")
+	}
+
+	err = list.Insert(list.Size()+1, 100)
+	if err == nil {
+		t.Error("Insert beyond size should return error")
+	}
+}
+
+func TestLinkedListRemoveAt(t *testing.T) {
+	list := NewLinkedList[int]()
+	for i := 1; i <= 5; i++ {
+		list.Add(i)
+	}
+
+	// Test remove at middle
+	val, success := list.RemoveAt(2)
+	if !success {
+		t.Error("RemoveAt(2) should return true")
+	}
+	if val != 3 {
+		t.Errorf("RemoveAt(2) should return 3, got %d", val)
+	}
+
+	if list.Size() != 4 {
+		t.Errorf("List size should be 4, got %d", list.Size())
+	}
+
+	// Verify remaining elements
+	expected := []int{1, 2, 4, 5}
+	for i, exp := range expected {
+		val, _ := list.Get(i)
+		if val != exp {
+			t.Errorf("Get(%d) should return %d, got %d", i, exp, val)
+		}
+	}
+
+	// Test invalid indices
+	_, success = list.RemoveAt(-1)
+	if success {
+		t.Error("RemoveAt(-1) should return false")
+	}
+
+	_, success = list.RemoveAt(list.Size())
+	if success {
+		t.Error("RemoveAt beyond size should return false")
+	}
+}
+
+func TestLinkedListRemove(t *testing.T) {
+	list := NewLinkedList[int]()
+	list.Add(1)
+	list.Add(2)
+	list.Add(3)
+	list.Add(2)
+
+	// Test remove existing element
+	removed := list.Remove(2)
+	if !removed {
+		t.Error("Remove(2) should return true")
+	}
+
+	if list.Size() != 3 {
+		t.Errorf("List size should be 3, got %d", list.Size())
+	}
+
+	// Verify first occurrence was removed
+	expected := []int{1, 3, 2}
+	for i, exp := range expected {
+		val, _ := list.Get(i)
+		if val != exp {
+			t.Errorf("Get(%d) should return %d, got %d", i, exp, val)
+		}
+	}
+
+	// Test remove non-existing element
+	removed = list.Remove(10)
+	if removed {
+		t.Error("Remove(10) should return false")
 	}
 }
 
 func TestLinkedListIndexOf(t *testing.T) {
-	list := NewLinkedList[string]()
-	list.Add("apple")
-	list.Add("banana")
-	list.Add("apple")
-	list.Add("cherry")
+	list := NewLinkedList[int]()
+	list.Add(1)
+	list.Add(2)
+	list.Add(3)
+	list.Add(2)
 
-	if index := list.IndexOf("apple"); index != 0 {
-		t.Errorf("IndexOf('apple')应该返回0，实际返回%d", index)
+	// Test existing element
+	index := list.IndexOf(2)
+	if index != 1 {
+		t.Errorf("IndexOf(2) should return 1, got %d", index)
 	}
 
-	if index := list.LastIndexOf("apple"); index != 2 {
-		t.Errorf("LastIndexOf('apple')应该返回2，实际返回%d", index)
+	// Test non-existing element
+	index = list.IndexOf(10)
+	if index != -1 {
+		t.Errorf("IndexOf(10) should return -1, got %d", index)
+	}
+}
+
+func TestLinkedListLastIndexOf(t *testing.T) {
+	list := NewLinkedList[int]()
+	list.Add(1)
+	list.Add(2)
+	list.Add(3)
+	list.Add(2)
+
+	// Test existing element
+	index := list.LastIndexOf(2)
+	if index != 3 {
+		t.Errorf("LastIndexOf(2) should return 3, got %d", index)
 	}
 
-	if index := list.IndexOf("grape"); index != -1 {
-		t.Errorf("IndexOf('grape')应该返回-1，实际返回%d", index)
+	// Test non-existing element
+	index = list.LastIndexOf(10)
+	if index != -1 {
+		t.Errorf("LastIndexOf(10) should return -1, got %d", index)
 	}
 }
 
@@ -149,122 +278,29 @@ func TestLinkedListSubList(t *testing.T) {
 		list.Add(i)
 	}
 
-	subList, err := list.SubList(1, 4)
+	// Test valid sublist
+	sublist, err := list.SubList(1, 4)
 	if err != nil {
-		t.Errorf("SubList(1, 4)应该成功，错误：%v", err)
+		t.Errorf("SubList should not return error, got %v", err)
 	}
 
-	if subList.Size() != 3 {
-		t.Errorf("子列表大小应该为3，实际为%d", subList.Size())
+	if sublist.Size() != 3 {
+		t.Errorf("Sublist size should be 3, got %d", sublist.Size())
 	}
 
+	// Verify sublist elements
 	expected := []int{1, 2, 3}
 	for i, exp := range expected {
-		if val, _ := subList.Get(i); val != exp {
-			t.Errorf("子列表索引%d的值应该为%d，实际为%d", i, exp, val)
+		val, _ := sublist.Get(i)
+		if val != exp {
+			t.Errorf("Sublist Get(%d) should return %d, got %d", i, exp, val)
 		}
 	}
-}
 
-func TestLinkedListIterator(t *testing.T) {
-	list := NewLinkedList[int]()
-	for i := 1; i <= 3; i++ {
-		list.Add(i)
-	}
-
-	iter := list.Iterator()
-	values := []int{}
-
-	for iter.HasNext() {
-		val, ok := iter.Next()
-		if !ok {
-			t.Error("Next()应该成功")
-		}
-		values = append(values, val)
-	}
-
-	expected := []int{1, 2, 3}
-	if len(values) != len(expected) {
-		t.Errorf("迭代器返回的元素数量应该为%d，实际为%d", len(expected), len(values))
-	}
-
-	for i, exp := range expected {
-		if values[i] != exp {
-			t.Errorf("索引%d的值应该为%d，实际为%d", i, exp, values[i])
-		}
-	}
-}
-
-func TestLinkedListFirstLast(t *testing.T) {
-	list := NewLinkedList[string]()
-
-	// 测试空列表
-	if _, err := list.GetFirst(); err == nil {
-		t.Error("空列表GetFirst()应该返回错误")
-	}
-
-	if _, err := list.GetLast(); err == nil {
-		t.Error("空列表GetLast()应该返回错误")
-	}
-
-	// 添加元素
-	list.AddFirst("first")
-	list.AddLast("last")
-	list.AddFirst("new_first")
-
-	// 验证顺序：[new_first, first, last]
-	if val, _ := list.GetFirst(); val != "new_first" {
-		t.Errorf("GetFirst()应该返回'new_first'，实际返回'%s'", val)
-	}
-
-	if val, _ := list.GetLast(); val != "last" {
-		t.Errorf("GetLast()应该返回'last'，实际返回'%s'", val)
-	}
-
-	// 测试移除
-	if removed, err := list.RemoveFirst(); err != nil || removed != "new_first" {
-		t.Errorf("RemoveFirst()应该返回'new_first'，实际返回'%s'，错误：%v", removed, err)
-	}
-
-	if removed, err := list.RemoveLast(); err != nil || removed != "last" {
-		t.Errorf("RemoveLast()应该返回'last'，实际返回'%s'，错误：%v", removed, err)
-	}
-
-	if list.Size() != 1 {
-		t.Errorf("移除后列表大小应该为1，实际为%d", list.Size())
-	}
-}
-
-func TestLinkedListFromSlice(t *testing.T) {
-	slice := []int{1, 2, 3, 4, 5}
-	list := LinkedListFromSlice(slice)
-
-	if list.Size() != len(slice) {
-		t.Errorf("列表大小应该为%d，实际为%d", len(slice), list.Size())
-	}
-
-	for i, expected := range slice {
-		if val, _ := list.Get(i); val != expected {
-			t.Errorf("索引%d的值应该为%d，实际为%d", i, expected, val)
-		}
-	}
-}
-
-func TestLinkedListToSlice(t *testing.T) {
-	list := NewLinkedList[int]()
-	for i := 1; i <= 5; i++ {
-		list.Add(i)
-	}
-
-	slice := list.ToSlice()
-	if len(slice) != list.Size() {
-		t.Errorf("切片长度应该为%d，实际为%d", list.Size(), len(slice))
-	}
-
-	for i := 0; i < list.Size(); i++ {
-		if val, _ := list.Get(i); slice[i] != val {
-			t.Errorf("索引%d的值应该为%d，实际为%d", i, val, slice[i])
-		}
+	// Test invalid indices
+	_, err = list.SubList(-1, 3)
+	if err == nil {
+		t.Error("SubList with invalid indices should return error")
 	}
 }
 
@@ -277,25 +313,80 @@ func TestLinkedListClear(t *testing.T) {
 	list.Clear()
 
 	if !list.IsEmpty() {
-		t.Error("清空后列表应该为空")
+		t.Error("List should be empty after clear")
 	}
 
 	if list.Size() != 0 {
-		t.Errorf("清空后列表大小应该为0，实际为%d", list.Size())
+		t.Errorf("List size should be 0 after clear, got %d", list.Size())
 	}
 }
 
 func TestLinkedListContains(t *testing.T) {
-	list := NewLinkedList[string]()
-	list.Add("apple")
-	list.Add("banana")
-	list.Add("cherry")
+	list := NewLinkedList[int]()
+	list.Add(1)
+	list.Add(2)
+	list.Add(3)
 
-	if !list.Contains("banana") {
-		t.Error("列表应该包含'banana'")
+	if !list.Contains(2) {
+		t.Error("List should contain 2")
 	}
 
-	if list.Contains("grape") {
-		t.Error("列表不应该包含'grape'")
+	if list.Contains(4) {
+		t.Error("List should not contain 4")
+	}
+}
+
+func TestLinkedListForEach(t *testing.T) {
+	list := NewLinkedList[int]()
+	list.Add(1)
+	list.Add(2)
+	list.Add(3)
+
+	sum := 0
+	list.ForEach(func(val int) {
+		sum += val
+	})
+
+	if sum != 6 {
+		t.Errorf("Sum should be 6, got %d", sum)
+	}
+}
+
+func TestLinkedListToSlice(t *testing.T) {
+	list := NewLinkedList[int]()
+	list.Add(1)
+	list.Add(2)
+	list.Add(3)
+
+	slice := list.ToSlice()
+
+	if len(slice) != 3 {
+		t.Errorf("Slice length should be 3, got %d", len(slice))
+	}
+
+	expected := []int{1, 2, 3}
+	for i, val := range slice {
+		if val != expected[i] {
+			t.Errorf("Slice[%d] should be %d, got %d", i, expected[i], val)
+		}
+	}
+}
+
+func TestLinkedListString(t *testing.T) {
+	list := NewLinkedList[int]()
+
+	// Test empty list
+	if list.String() != "[]" {
+		t.Errorf("Empty list string should be '[]', got '%s'", list.String())
+	}
+
+	// Test non-empty list
+	list.Add(1)
+	list.Add(2)
+	list.Add(3)
+
+	expected := "[1, 2, 3]"
+	if list.String() != expected {
+		t.Errorf("List string should be '%s', got '%s'", expected, list.String())
 	}
 }

@@ -1,4 +1,4 @@
-// Package common 提供容器库的通用工具和接口
+// Package common provides common utilities and interfaces for the container library
 package common
 
 import (
@@ -8,124 +8,317 @@ import (
 	"strings"
 )
 
-// Equal 比较两个值是否相等
-// 使用reflect.DeepEqual进行深度比较
-func Equal[T any](a, b T) bool {
+// Equal compares two values for equality
+// Uses reflect.DeepEqual for deep comparison
+func Equal(a, b interface{}) bool {
 	return reflect.DeepEqual(a, b)
 }
 
-// Hash 计算值的哈希码
-// 使用FNV-1a算法对值的字符串表示进行哈希
-func Hash[T any](value T) int {
-	h := fnv.New32a()
-	h.Write([]byte(fmt.Sprintf("%v", value)))
-	return int(h.Sum32())
+// Hash calculates the hash code of a value
+// Uses FNV-1a algorithm to hash the string representation of the value
+func Hash(v interface{}) uint64 {
+	h := fnv.New64a()
+	h.Write([]byte(fmt.Sprintf("%v", v)))
+	return h.Sum64()
 }
 
-// Compare 比较两个值
-// 返回:
-//   - 负数: a < b
-//   - 0: a == b
-//   - 正数: a > b
-func Compare[T any](a, b T) int {
-	// 处理nil值
-	aIsNil := reflect.ValueOf(a).IsZero()
-	bIsNil := reflect.ValueOf(b).IsZero()
-
-	if aIsNil && bIsNil {
+// Compare compares two values
+// Returns:
+//   - negative number: a < b
+//   - zero: a == b
+//   - positive number: a > b
+func Compare(a, b interface{}) int {
+	// Handle nil values
+	if a == nil && b == nil {
 		return 0
 	}
-	if aIsNil {
+	if a == nil {
 		return -1
 	}
-	if bIsNil {
+	if b == nil {
 		return 1
 	}
 
-	// 尝试类型断言为可比较类型
-	switch v1 := any(a).(type) {
+	// Try type assertion for comparable types
+	switch va := a.(type) {
 	case int:
-		return v1 - any(b).(int)
+		if vb, ok := b.(int); ok {
+			if va < vb {
+				return -1
+			} else if va > vb {
+				return 1
+			}
+			return 0
+		}
 	case int8:
-		return int(v1) - int(any(b).(int8))
+		if vb, ok := b.(int8); ok {
+			if va < vb {
+				return -1
+			} else if va > vb {
+				return 1
+			}
+			return 0
+		}
 	case int16:
-		return int(v1) - int(any(b).(int16))
+		if vb, ok := b.(int16); ok {
+			if va < vb {
+				return -1
+			} else if va > vb {
+				return 1
+			}
+			return 0
+		}
 	case int32:
-		return int(v1) - int(any(b).(int32))
+		if vb, ok := b.(int32); ok {
+			if va < vb {
+				return -1
+			} else if va > vb {
+				return 1
+			}
+			return 0
+		}
 	case int64:
-		v2 := any(b).(int64)
-		if v1 < v2 {
+		if vb, ok := b.(int64); ok {
+			if va < vb {
+				return -1
+			} else if va > vb {
+				return 1
+			}
+			return 0
+		}
+	case uint:
+		if vb, ok := b.(uint); ok {
+			if va < vb {
+				return -1
+			} else if va > vb {
+				return 1
+			}
+			return 0
+		}
+	case uint8:
+		if vb, ok := b.(uint8); ok {
+			if va < vb {
+				return -1
+			} else if va > vb {
+				return 1
+			}
+			return 0
+		}
+	case uint16:
+		if vb, ok := b.(uint16); ok {
+			if va < vb {
+				return -1
+			} else if va > vb {
+				return 1
+			}
+			return 0
+		}
+	case uint32:
+		if vb, ok := b.(uint32); ok {
+			if va < vb {
+				return -1
+			} else if va > vb {
+				return 1
+			}
+			return 0
+		}
+	case uint64:
+		if vb, ok := b.(uint64); ok {
+			if va < vb {
+				return -1
+			} else if va > vb {
+				return 1
+			}
+			return 0
+		}
+	case float32:
+		if vb, ok := b.(float32); ok {
+			if va < vb {
+				return -1
+			} else if va > vb {
+				return 1
+			}
+			return 0
+		}
+	case float64:
+		if vb, ok := b.(float64); ok {
+			if va < vb {
+				return -1
+			} else if va > vb {
+				return 1
+			}
+			return 0
+		}
+	case string:
+		if vb, ok := b.(string); ok {
+			if va < vb {
+				return -1
+			} else if va > vb {
+				return 1
+			}
+			return 0
+		}
+	}
+
+	// Check if both implement fmt.Stringer
+	if sa, ok := a.(fmt.Stringer); ok {
+		if sb, ok := b.(fmt.Stringer); ok {
+			return strings.Compare(sa.String(), sb.String())
+		}
+	}
+
+	// For types that cannot be directly compared, use hash values for comparison
+	hashA := Hash(a)
+	hashB := Hash(b)
+	if hashA < hashB {
+		return -1
+	} else if hashA > hashB {
+		return 1
+	}
+	return 0
+}
+
+// CompareGeneric compares two comparable values using generics
+// Returns:
+//   - negative number: a < b
+//   - zero: a == b
+//   - positive number: a > b
+func CompareGeneric[T comparable](a, b T) int {
+	// Use type assertion to handle specific types
+	switch va := any(a).(type) {
+	case int:
+		vb := any(b).(int)
+		if va < vb {
 			return -1
-		} else if v1 > v2 {
+		} else if va > vb {
+			return 1
+		}
+		return 0
+	case int8:
+		vb := any(b).(int8)
+		if va < vb {
+			return -1
+		} else if va > vb {
+			return 1
+		}
+		return 0
+	case int16:
+		vb := any(b).(int16)
+		if va < vb {
+			return -1
+		} else if va > vb {
+			return 1
+		}
+		return 0
+	case int32:
+		vb := any(b).(int32)
+		if va < vb {
+			return -1
+		} else if va > vb {
+			return 1
+		}
+		return 0
+	case int64:
+		vb := any(b).(int64)
+		if va < vb {
+			return -1
+		} else if va > vb {
 			return 1
 		}
 		return 0
 	case uint:
-		v2 := any(b).(uint)
-		if v1 < v2 {
+		vb := any(b).(uint)
+		if va < vb {
 			return -1
-		} else if v1 > v2 {
+		} else if va > vb {
 			return 1
 		}
 		return 0
 	case uint8:
-		return int(v1) - int(any(b).(uint8))
-	case uint16:
-		return int(v1) - int(any(b).(uint16))
-	case uint32:
-		v2 := any(b).(uint32)
-		if v1 < v2 {
+		vb := any(b).(uint8)
+		if va < vb {
 			return -1
-		} else if v1 > v2 {
+		} else if va > vb {
+			return 1
+		}
+		return 0
+	case uint16:
+		vb := any(b).(uint16)
+		if va < vb {
+			return -1
+		} else if va > vb {
+			return 1
+		}
+		return 0
+	case uint32:
+		vb := any(b).(uint32)
+		if va < vb {
+			return -1
+		} else if va > vb {
 			return 1
 		}
 		return 0
 	case uint64:
-		v2 := any(b).(uint64)
-		if v1 < v2 {
+		vb := any(b).(uint64)
+		if va < vb {
 			return -1
-		} else if v1 > v2 {
+		} else if va > vb {
 			return 1
 		}
 		return 0
 	case float32:
-		v2 := any(b).(float32)
-		if v1 < v2 {
+		vb := any(b).(float32)
+		if va < vb {
 			return -1
-		} else if v1 > v2 {
+		} else if va > vb {
 			return 1
 		}
 		return 0
 	case float64:
-		v2 := any(b).(float64)
-		if v1 < v2 {
+		vb := any(b).(float64)
+		if va < vb {
 			return -1
-		} else if v1 > v2 {
+		} else if va > vb {
 			return 1
 		}
 		return 0
 	case string:
-		return strings.Compare(v1, any(b).(string))
-	case fmt.Stringer:
-		return strings.Compare(v1.String(), any(b).(fmt.Stringer).String())
+		vb := any(b).(string)
+		if va < vb {
+			return -1
+		} else if va > vb {
+			return 1
+		}
+		return 0
 	default:
-		// 对于不可直接比较的类型，使用哈希值比较
-		return Hash(a) - Hash(b)
+		// For other comparable types, check equality first
+		if a == b {
+			return 0
+		}
+		// For non-comparable types or when equality fails, use hash values for comparison
+		hashA := Hash(a)
+		hashB := Hash(b)
+		if hashA < hashB {
+			return -1
+		} else if hashA > hashB {
+			return 1
+		}
+		return 0
 	}
 }
 
-// Pair 表示键值对
-type Pair[K any, V any] struct {
+// Pair represents a key-value pair
+type Pair[K, V any] struct {
 	Key   K
 	Value V
 }
 
-// NewPair 创建一个新的键值对
-func NewPair[K any, V any](key K, value V) Pair[K, V] {
+// NewPair creates a new key-value pair
+func NewPair[K, V any](key K, value V) Pair[K, V] {
 	return Pair[K, V]{Key: key, Value: value}
 }
 
-// String 返回Pair的字符串表示
+// String returns the string representation of the Pair
 func (p Pair[K, V]) String() string {
-	return fmt.Sprintf("%v=%v", p.Key, p.Value)
+	return fmt.Sprintf("(%v, %v)", p.Key, p.Value)
 }

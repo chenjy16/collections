@@ -1,52 +1,44 @@
-// Package common 提供容器库的通用工具和接口
+// Package common provides common interfaces for the container library
 package common
 
-// 模块路径: github.com/chenjianyu/collections/container/common
-
-// Container 是所有容器类型的基本接口
+// Container represents a collection of elements
 type Container[E any] interface {
-	// Size 返回容器中的元素数量
+	// Size returns the number of elements in the container
 	Size() int
-
-	// IsEmpty 检查容器是否为空
+	// IsEmpty returns true if the container is empty
 	IsEmpty() bool
-
-	// Clear 清空容器中的所有元素
+	// Clear removes all elements from the container
 	Clear()
-
-	// Contains 检查容器是否包含指定元素
-	Contains(e E) bool
-
-	// ForEach 对容器中的每个元素执行给定的操作
-	ForEach(f func(E))
-
-	// String 返回容器的字符串表示
+	// Contains returns true if the container contains the specified element
+	Contains(element E) bool
+	// String returns the string representation of the container
 	String() string
 }
 
-// Iterable 表示可迭代的容器
+// Iterable represents a collection that can be iterated
 type Iterable[E any] interface {
-	// Iterator 返回一个迭代器，用于遍历容器中的元素
+	// Iterator returns an iterator for the collection
 	Iterator() Iterator[E]
+	// ForEach executes the given function for each element
+	ForEach(func(E))
 }
 
-// Iterator 表示容器的迭代器
+// Iterator represents an iterator for traversing elements
 type Iterator[E any] interface {
-	// HasNext 检查迭代器是否还有下一个元素
+	// HasNext returns true if there are more elements to iterate
 	HasNext() bool
-
-	// Next 返回迭代器中的下一个元素
-	// 如果没有下一个元素，第二个返回值为false
+	// Next returns the next element
 	Next() (E, bool)
-
-	// Remove 移除迭代器最后返回的元素
-	// 如果在调用Next()之前调用Remove()，或者在同一个Next()之后多次调用Remove()，则返回false
+	// Remove removes the current element (optional operation)
 	Remove() bool
 }
 
-// Comparable 表示可比较的类型
+// Comparable represents a type that can be compared
 type Comparable interface {
-	// CompareTo 将此对象与指定对象进行比较
-	// 返回负整数、零或正整数，分别表示此对象小于、等于或大于指定对象
+	// CompareTo compares this object with another object
+	// Returns:
+	//   - negative number: this < other
+	//   - zero: this == other
+	//   - positive number: this > other
 	CompareTo(other interface{}) int
 }

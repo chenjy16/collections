@@ -1,241 +1,262 @@
-// Package set 提供集合数据结构的实现
+// Package set provides set data structure implementations
 package set
 
 import (
 	"fmt"
-	"strings"
-
 	"github.com/chenjianyu/collections/container/common"
+	"hash/fnv"
+	"strings"
 )
 
-// HashSet 是一个基于哈希表的Set实现
-type HashSet[E any] struct {
-	elements map[any]E
+// HashSet is a Set implementation based on hash table
+type HashSet[E comparable] struct {
+	buckets [][]E
+	size    int
 }
 
-// New 创建一个新的HashSet
-func New[E any]() *HashSet[E] {
-	return &HashSet[E]{elements: make(map[any]E)}
+// New creates a new HashSet
+func New[E comparable]() *HashSet[E] {
+	return &HashSet[E]{buckets: make([][]E, 16)}
 }
 
-// FromSlice 从切片创建一个新的HashSet
-func FromSlice[E any](elements []E) *HashSet[E] {
+// FromSlice creates a new HashSet from a slice
+func FromSlice[E comparable](slice []E) *HashSet[E] {
 	set := New[E]()
-	for _, e := range elements {
-		set.Add(e)
+	for _, element := range slice {
+		set.Add(element)
 	}
 	return set
 }
 
-// Add 添加元素到集合
-func (set *HashSet[E]) Add(e E) bool {
-	hashCode := common.Hash(e)
-	_, exists := set.elements[hashCode]
-	if exists {
-		// 检查是否真的是相同元素（处理哈希冲突）
-		if common.Equal(set.elements[hashCode], e) {
+// Add adds an element to the set
+func (s *HashSet[E]) Add(element E) bool {
+	index := s.hash(element) % len(s.buckets)
+	bucket := s.buckets[index]
+
+	// Check if the element is really the same (handle hash collisions)
+	for _, existing := range bucket {
+		if existing == element {
 			return false
 		}
 	}
-	set.elements[hashCode] = e
+
+	s.buckets[index] = append(bucket, element)
+	s.size++
 	return true
 }
 
-// Remove 从集合中移除指定元素
-func (set *HashSet[E]) Remove(e E) bool {
-	hashCode := common.Hash(e)
-	_, exists := set.elements[hashCode]
-	if !exists {
-		return false
+// Remove removes the specified element from the set
+func (s *HashSet[E]) Remove(element E) bool {
+	index := s.hash(element) % len(s.buckets)
+	bucket := s.buckets[index]
+
+	for i, existing := range bucket {
+		// Check if the element is really the same (handle hash collisions)
+		if existing == element {
+			s.buckets[index] = append(bucket[:i], bucket[i+1:]...)
+			s.size--
+			return true
+		}
 	}
+	return false
+}
 
-	// 检查是否真的是相同元素（处理哈希冲突）
-	if !common.Equal(set.elements[hashCode], e) {
-		return false
+// Contains checks if the set contains the specified element
+func (s *HashSet[E]) Contains(element E) bool {
+	index := s.hash(element) % len(s.buckets)
+	bucket := s.buckets[index]
+
+	for _, existing := range bucket {
+		// Check if the element is really the same (handle hash collisions)
+		if existing == element {
+			return true
+		}
 	}
-
-	delete(set.elements, hashCode)
-	return true
+	return false
 }
 
-// Contains 检查集合是否包含指定元素
-func (set *HashSet[E]) Contains(e E) bool {
-	hashCode := common.Hash(e)
-	val, exists := set.elements[hashCode]
-	if !exists {
-		return false
-	}
-
-	// 检查是否真的是相同元素（处理哈希冲突）
-	return common.Equal(val, e)
+// Size returns the number of elements in the set
+func (s *HashSet[E]) Size() int {
+	return s.size
 }
 
-// Size 返回集合中的元素数量
-func (set *HashSet[E]) Size() int {
-	return len(set.elements)
+// IsEmpty checks if the set is empty
+func (s *HashSet[E]) IsEmpty() bool {
+	return s.size == 0
 }
 
-// IsEmpty 检查集合是否为空
-func (set *HashSet[E]) IsEmpty() bool {
-	return len(set.elements) == 0
+// Clear empties the set
+func (s *HashSet[E]) Clear() {
+	s.buckets = make([][]E, 16)
+	s.size = 0
 }
 
-// Clear 清空集合
-func (set *HashSet[E]) Clear() {
-	set.elements = make(map[any]E)
-}
-
-// ToSlice 返回包含集合所有元素的切片
-func (set *HashSet[E]) ToSlice() []E {
-	result := make([]E, 0, len(set.elements))
-	for _, v := range set.elements {
-		result = append(result, v)
+// ToSlice returns a slice containing all elements in the set
+func (s *HashSet[E]) ToSlice() []E {
+	result := make([]E, 0, s.size)
+	for _, bucket := range s.buckets {
+		result = append(result, bucket...)
 	}
 	return result
 }
 
-// ForEach 对集合中的每个元素执行给定的操作
-func (set *HashSet[E]) ForEach(f func(E)) {
-	for _, v := range set.elements {
-		f(v)
+// ForEach executes the given operation on each element in the set
+func (s *HashSet[E]) ForEach(fn func(E)) {
+	for _, bucket := range s.buckets {
+		for _, element := range bucket {
+			fn(element)
+		}
 	}
 }
 
-// Union 返回此集合与另一个集合的并集
-func (set *HashSet[E]) Union(other Set[E]) Set[E] {
+// Union returns the union of this set and another set
+func (s *HashSet[E]) Union(other Set[E]) Set[E] {
 	result := New[E]()
 
-	// 添加此集合的所有元素
-	for _, v := range set.elements {
-		result.Add(v)
-	}
+	// Add all elements from this set
+	s.ForEach(func(element E) {
+		result.Add(element)
+	})
 
-	// 添加另一个集合的所有元素
-	other.ForEach(func(e E) {
-		result.Add(e)
+	// Add all elements from the other set
+	other.ForEach(func(element E) {
+		result.Add(element)
 	})
 
 	return result
 }
 
-// Intersection 返回此集合与另一个集合的交集
-func (set *HashSet[E]) Intersection(other Set[E]) Set[E] {
+// Intersection returns the intersection of this set and another set
+func (s *HashSet[E]) Intersection(other Set[E]) Set[E] {
 	result := New[E]()
 
-	// 添加同时存在于两个集合中的元素
-	set.ForEach(func(e E) {
-		if other.Contains(e) {
-			result.Add(e)
+	// Add elements that exist in both sets
+	s.ForEach(func(element E) {
+		if other.Contains(element) {
+			result.Add(element)
 		}
 	})
 
 	return result
 }
 
-// Difference 返回此集合与另一个集合的差集
-func (set *HashSet[E]) Difference(other Set[E]) Set[E] {
+// Difference returns the difference of this set and another set
+func (s *HashSet[E]) Difference(other Set[E]) Set[E] {
 	result := New[E]()
 
-	// 添加在此集合中但不在另一个集合中的元素
-	set.ForEach(func(e E) {
-		if !other.Contains(e) {
-			result.Add(e)
+	// Add elements that are in this set but not in the other set
+	s.ForEach(func(element E) {
+		if !other.Contains(element) {
+			result.Add(element)
 		}
 	})
 
 	return result
 }
 
-// IsSubsetOf 检查此集合是否为另一个集合的子集
-func (set *HashSet[E]) IsSubsetOf(other Set[E]) bool {
-	// 空集是任何集合的子集
-	if set.IsEmpty() {
+// IsSubsetOf checks if this set is a subset of another set
+func (s *HashSet[E]) IsSubsetOf(other Set[E]) bool {
+	// Empty set is a subset of any set
+	if s.IsEmpty() {
 		return true
 	}
 
-	// 如果此集合的大小大于另一个集合，则它不可能是子集
-	if set.Size() > other.Size() {
-		return false
+	// If this set is larger than the other set, it cannot be a subset
+	if s.Size() > other.Size() {
+		return true
 	}
 
-	// 检查此集合的每个元素是否都在另一个集合中
-	for _, v := range set.elements {
-		if !other.Contains(v) {
-			return false
+	// Check if every element in this set is in the other set
+	for _, bucket := range s.buckets {
+		for _, element := range bucket {
+			if !other.Contains(element) {
+				return false
+			}
 		}
 	}
-
 	return true
 }
 
-// IsSupersetOf 检查此集合是否为另一个集合的超集
-func (set *HashSet[E]) IsSupersetOf(other Set[E]) bool {
-	return other.IsSubsetOf(set)
+// IsSupersetOf checks if this set is a superset of another set
+func (s *HashSet[E]) IsSupersetOf(other Set[E]) bool {
+	return other.IsSubsetOf(s)
 }
 
-// String 返回集合的字符串表示
-func (set *HashSet[E]) String() string {
-	if set.IsEmpty() {
+// String returns the string representation of the set
+func (s *HashSet[E]) String() string {
+	if s.IsEmpty() {
 		return "[]"
 	}
 
-	elements := set.ToSlice()
-	var sb strings.Builder
-	sb.WriteString("[")
-
-	for i, e := range elements {
-		if i > 0 {
-			sb.WriteString(", ")
+	var builder strings.Builder
+	builder.WriteString("[")
+	first := true
+	for _, bucket := range s.buckets {
+		for _, element := range bucket {
+			if !first {
+				builder.WriteString(", ")
+			}
+			builder.WriteString(fmt.Sprintf("%v", element))
+			first = false
 		}
-		sb.WriteString(fmt.Sprintf("%v", e))
 	}
-
-	sb.WriteString("]")
-	return sb.String()
+	builder.WriteString("]")
+	return builder.String()
 }
 
-// Iterator 返回一个迭代器，用于遍历集合中的元素
-func (set *HashSet[E]) Iterator() common.Iterator[E] {
-	return &hashSetIterator[E]{set: set, elements: set.ToSlice(), cursor: 0, lastRet: -1}
+// Iterator returns an iterator for traversing elements in the set
+func (s *HashSet[E]) Iterator() common.Iterator[E] {
+	return &hashSetIterator[E]{
+		set:      s,
+		elements: s.ToSlice(),
+		cursor:   0,
+		lastRet:  -1,
+	}
 }
 
-// hashSetIterator 是HashSet的迭代器实现
-type hashSetIterator[E any] struct {
+// hashSetIterator is the iterator implementation for HashSet
+type hashSetIterator[E comparable] struct {
 	set      *HashSet[E]
 	elements []E
-	cursor   int // 下一个元素的索引
-	lastRet  int // 最后返回的元素的索引，如果没有则为-1
+	cursor   int // Index of the next element
+	lastRet  int // Index of the last returned element, -1 if none
 }
 
-// HasNext 检查迭代器是否还有下一个元素
+// HasNext checks if the iterator has a next element
 func (it *hashSetIterator[E]) HasNext() bool {
 	return it.cursor < len(it.elements)
 }
 
-// Next 返回迭代器中的下一个元素
+// Next returns the next element in the iterator
 func (it *hashSetIterator[E]) Next() (E, bool) {
 	if !it.HasNext() {
-		return *new(E), false
+		var zero E
+		return zero, false
 	}
-
+	element := it.elements[it.cursor]
 	it.lastRet = it.cursor
 	it.cursor++
-	return it.elements[it.lastRet], true
+	return element, true
 }
 
-// Remove 移除迭代器最后返回的元素
+// Remove removes the last element returned by the iterator
 func (it *hashSetIterator[E]) Remove() bool {
-	if it.lastRet < 0 {
+	if it.lastRet == -1 {
 		return false
 	}
-
 	removed := it.set.Remove(it.elements[it.lastRet])
 	if removed {
-		// 更新迭代器的元素列表
+		// Update the iterator's element list
 		it.elements = it.set.ToSlice()
-		it.cursor = 0 // 重置游标，因为元素列表已更改
+		it.cursor = 0 // Reset cursor since element list has changed
 		it.lastRet = -1
 	}
-
 	return removed
+}
+
+// hash computes hash value for the element
+func (s *HashSet[E]) hash(element E) int {
+	h := fnv.New32a()
+	h.Write([]byte(fmt.Sprintf("%v", element)))
+	return int(h.Sum32())
 }

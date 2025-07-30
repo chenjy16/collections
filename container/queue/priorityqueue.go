@@ -1,4 +1,4 @@
-// Package queue 提供队列数据结构的实现
+// Package queue provides queue data structure implementations
 package queue
 
 import (
@@ -9,119 +9,118 @@ import (
 	"github.com/chenjianyu/collections/container/common"
 )
 
-var (
-	// ErrEmptyQueue 表示队列为空错误
-	ErrEmptyQueue = errors.New("queue is empty")
+// ErrEmptyQueue indicates the queue is empty error
+var ErrEmptyQueue = errors.New("queue is empty")
 
-	// ErrFullQueue 表示队列已满错误
-	ErrFullQueue = errors.New("queue is full")
-)
-// PriorityQueue 是一个基于二叉堆的优先队列实现
-// 默认为最小堆，可以通过提供自定义比较器来创建最大堆
+// ErrFullQueue indicates the queue is full error
+var ErrFullQueue = errors.New("queue is full")
+
+// PriorityQueue is a priority queue implementation based on binary heap
+// Default is min heap, can create max heap by providing custom comparator
 type PriorityQueue[E any] struct {
-	elements []E
-	compare  func(E, E) int
-	maxCap   int // 最大容量，0表示无界
+	heap       []E
+	comparator func(a, b E) int
+	maxCap     int // maximum capacity, 0 means unbounded
 }
 
-// NewPriorityQueue 创建一个新的无界优先队列，使用默认比较器
-// 默认比较器要求元素类型实现common.Comparable接口
+// NewPriorityQueue creates a new unbounded priority queue using default comparator
+// Default comparator requires element type to implement common.Comparable interface
 func NewPriorityQueue[E common.Comparable]() *PriorityQueue[E] {
 	return &PriorityQueue[E]{
-		elements: make([]E, 0),
-		compare: func(a, b E) int {
+		heap: make([]E, 0),
+		comparator: func(a, b E) int {
 			return a.CompareTo(b)
 		},
 		maxCap: 0,
 	}
 }
 
-// NewPriorityQueueWithComparator 创建一个新的无界优先队列，使用自定义比较器
-func NewPriorityQueueWithComparator[E any](compare func(E, E) int) *PriorityQueue[E] {
+// NewPriorityQueueWithComparator creates a new unbounded priority queue using custom comparator
+func NewPriorityQueueWithComparator[E any](comparator func(a, b E) int) *PriorityQueue[E] {
 	return &PriorityQueue[E]{
-		elements: make([]E, 0),
-		compare:  compare,
-		maxCap:   0,
+		heap:       make([]E, 0),
+		comparator: comparator,
+		maxCap:     0,
 	}
 }
 
-// WithCapacity 创建一个具有指定最大容量的优先队列，使用默认比较器
-func NewPriorityQueueWithCapacity[E common.Comparable](maxCapacity int) *PriorityQueue[E] {
+// WithCapacity creates a priority queue with specified maximum capacity using default comparator
+func WithCapacityComparable[E common.Comparable](capacity int) *PriorityQueue[E] {
 	return &PriorityQueue[E]{
-		elements: make([]E, 0, maxCapacity),
-		compare: func(a, b E) int {
+		heap: make([]E, 0, capacity),
+		comparator: func(a, b E) int {
 			return a.CompareTo(b)
 		},
-		maxCap: maxCapacity,
+		maxCap: capacity,
 	}
 }
 
-// WithCapacityAndComparator 创建一个具有指定最大容量的优先队列，使用自定义比较器
-func NewPriorityQueueWithCapacityAndComparator[E any](maxCapacity int, compare func(E, E) int) *PriorityQueue[E] {
+// WithCapacityAndComparator creates a priority queue with specified maximum capacity using custom comparator
+func WithCapacityAndComparator[E any](capacity int, comparator func(a, b E) int) *PriorityQueue[E] {
 	return &PriorityQueue[E]{
-		elements: make([]E, 0, maxCapacity),
-		compare:  compare,
-		maxCap:   maxCapacity,
+		heap:       make([]E, 0, capacity),
+		comparator: comparator,
+		maxCap:     capacity,
 	}
 }
 
-// NewFromSlice 从切片创建一个新的优先队列，使用默认比较器
-func NewFromSlice[E common.Comparable](elements []E) *PriorityQueue[E] {
+// NewFromSlice creates a new priority queue from a slice using default comparator
+func NewFromSliceComparable[E common.Comparable](slice []E) *PriorityQueue[E] {
 	pq := NewPriorityQueue[E]()
-	for _, e := range elements {
-		pq.Add(e)
+	for _, item := range slice {
+		pq.Add(item)
 	}
 	return pq
 }
 
-// NewFromSliceWithComparator 从切片创建一个新的优先队列，使用自定义比较器
-func NewFromSliceWithComparator[E any](elements []E, compare func(E, E) int) *PriorityQueue[E] {
-	pq := NewPriorityQueueWithComparator(compare)
-	for _, e := range elements {
-		pq.Add(e)
+// NewFromSliceWithComparator creates a new priority queue from a slice using custom comparator
+func NewFromSliceWithComparator[E any](slice []E, comparator func(a, b E) int) *PriorityQueue[E] {
+	pq := NewPriorityQueueWithComparator(comparator)
+	for _, item := range slice {
+		pq.Add(item)
 	}
 	return pq
 }
 
-// Size 返回队列中的元素数量
+// Size returns the number of elements in the queue
 func (pq *PriorityQueue[E]) Size() int {
-	return len(pq.elements)
+	return len(pq.heap)
 }
 
-// IsEmpty 检查队列是否为空
+// IsEmpty checks if the queue is empty
 func (pq *PriorityQueue[E]) IsEmpty() bool {
-	return len(pq.elements) == 0
+	return len(pq.heap) == 0
 }
 
-// isFull 检查队列是否已满
+// isFull checks if the queue is full
 func (pq *PriorityQueue[E]) isFull() bool {
-	return pq.maxCap > 0 && len(pq.elements) >= pq.maxCap
+	return pq.maxCap > 0 && len(pq.heap) >= pq.maxCap
 }
 
-// Clear 清空队列
+// Clear clears the queue
 func (pq *PriorityQueue[E]) Clear() {
-	pq.elements = pq.elements[:0]
+	pq.heap = pq.heap[:0]
 }
 
-// Contains 检查队列是否包含指定元素
-func (pq *PriorityQueue[E]) Contains(e E) bool {
-	for _, v := range pq.elements {
-		if pq.compare(v, e) == 0 {
+// Contains checks if the queue contains the specified element
+func (pq *PriorityQueue[E]) Contains(element E) bool {
+	for _, item := range pq.heap {
+		if common.Equal(item, element) {
 			return true
 		}
 	}
 	return false
 }
 
-// ForEach 对队列中的每个元素执行给定的操作
-// 注意：遍历顺序不保证是优先级顺序
-func (pq *PriorityQueue[E]) ForEach(f func(E)) {
-	for _, e := range pq.elements {
-		f(e)
+// ForEach executes the given operation for each element in the queue
+// Note: traversal order is not guaranteed to be in priority order
+func (pq *PriorityQueue[E]) ForEach(fn func(E)) {
+	for _, item := range pq.heap {
+		fn(item)
 	}
 }
 
-// String 返回队列的字符串表示
+// String returns the string representation of the queue
 func (pq *PriorityQueue[E]) String() string {
 	if pq.IsEmpty() {
 		return "[]"
@@ -130,9 +129,9 @@ func (pq *PriorityQueue[E]) String() string {
 	var sb strings.Builder
 	sb.WriteString("[")
 
-	for i, e := range pq.elements {
-		sb.WriteString(fmt.Sprintf("%v", e))
-		if i < len(pq.elements)-1 {
+	for i, item := range pq.heap {
+		sb.WriteString(fmt.Sprintf("%v", item))
+		if i < len(pq.heap)-1 {
 			sb.WriteString(", ")
 		}
 	}
@@ -141,124 +140,131 @@ func (pq *PriorityQueue[E]) String() string {
 	return sb.String()
 }
 
-// Add 将元素添加到队列中
-func (pq *PriorityQueue[E]) Add(e E) error {
+// Add adds an element to the queue
+func (pq *PriorityQueue[E]) Add(element E) error {
 	if pq.isFull() {
 		return ErrFullQueue
 	}
 
-	pq.elements = append(pq.elements, e)
-	pq.siftUp(len(pq.elements) - 1)
+	pq.heap = append(pq.heap, element)
+	pq.heapifyUp(len(pq.heap) - 1)
 	return nil
 }
 
-// Offer 将元素添加到队列中
-func (pq *PriorityQueue[E]) Offer(e E) bool {
+// Offer adds an element to the queue
+func (pq *PriorityQueue[E]) Offer(element E) bool {
 	if pq.isFull() {
 		return false
 	}
 
-	_ = pq.Add(e)
+	pq.heap = append(pq.heap, element)
+	pq.heapifyUp(len(pq.heap) - 1)
 	return true
 }
 
-// Remove 移除并返回队列中优先级最高的元素
+// Remove removes and returns the highest priority element from the queue
 func (pq *PriorityQueue[E]) Remove() (E, error) {
 	if pq.IsEmpty() {
-		return *new(E), ErrEmptyQueue
+		var zero E
+		return zero, ErrEmptyQueue
 	}
 
-	result := pq.elements[0]
-	lastIdx := len(pq.elements) - 1
-	pq.elements[0] = pq.elements[lastIdx]
-	pq.elements = pq.elements[:lastIdx]
+	root := pq.heap[0]
+	lastIndex := len(pq.heap) - 1
+	pq.heap[0] = pq.heap[lastIndex]
+	pq.heap = pq.heap[:lastIndex]
 
-	if !pq.IsEmpty() {
-		pq.siftDown(0)
+	if len(pq.heap) > 0 {
+		pq.heapifyDown(0)
 	}
 
-	return result, nil
+	return root, nil
 }
 
-// Poll 移除并返回队列中优先级最高的元素
+// Poll removes and returns the highest priority element from the queue
 func (pq *PriorityQueue[E]) Poll() (E, bool) {
-	result, err := pq.Remove()
-	return result, err == nil
+	element, err := pq.Remove()
+	return element, err == nil
 }
 
-// Element 返回队列中优先级最高的元素，但不移除
+// Element returns the highest priority element from the queue without removing it
 func (pq *PriorityQueue[E]) Element() (E, error) {
 	if pq.IsEmpty() {
-		return *new(E), ErrEmptyQueue
+		var zero E
+		return zero, ErrEmptyQueue
 	}
-
-	return pq.elements[0], nil
+	return pq.heap[0], nil
 }
 
-// Peek 返回队列中优先级最高的元素，但不移除
+// Peek returns the highest priority element from the queue without removing it
 func (pq *PriorityQueue[E]) Peek() (E, bool) {
-	result, err := pq.Element()
-	return result, err == nil
+	element, err := pq.Element()
+	return element, err == nil
 }
 
-// ToSlice 返回包含队列所有元素的切片
-// 注意：返回的切片不保证是按优先级排序的
+// ToSlice returns a slice containing all elements in the queue
+// Note: returned slice is not guaranteed to be sorted by priority
 func (pq *PriorityQueue[E]) ToSlice() []E {
-	result := make([]E, len(pq.elements))
-	copy(result, pq.elements)
+	result := make([]E, len(pq.heap))
+	copy(result, pq.heap)
 	return result
 }
 
-// ToSortedSlice 返回按优先级排序的队列元素切片
+// ToSortedSlice returns a slice of queue elements sorted by priority
 func (pq *PriorityQueue[E]) ToSortedSlice() []E {
-	result := make([]E, 0, len(pq.elements))
-	tempQueue := &PriorityQueue[E]{
-		elements: make([]E, len(pq.elements)),
-		compare:  pq.compare,
+	if pq.IsEmpty() {
+		return []E{}
 	}
-	copy(tempQueue.elements, pq.elements)
 
-	for !tempQueue.IsEmpty() {
-		val, _ := tempQueue.Remove()
-		result = append(result, val)
+	// Create a copy of the priority queue
+	tempPQ := &PriorityQueue[E]{
+		heap:       make([]E, len(pq.heap)),
+		comparator: pq.comparator,
+		maxCap:     0,
+	}
+	copy(tempPQ.heap, pq.heap)
+
+	result := make([]E, 0, len(pq.heap))
+	for !tempPQ.IsEmpty() {
+		element, _ := tempPQ.Remove()
+		result = append(result, element)
 	}
 
 	return result
 }
 
-// 内部方法：上移操作，用于维护堆属性
-func (pq *PriorityQueue[E]) siftUp(index int) {
+// Internal method: heapify up operation to maintain heap property
+func (pq *PriorityQueue[E]) heapifyUp(index int) {
 	for index > 0 {
 		parentIndex := (index - 1) / 2
-		if pq.compare(pq.elements[index], pq.elements[parentIndex]) >= 0 {
+		if pq.comparator(pq.heap[index], pq.heap[parentIndex]) >= 0 {
 			break
 		}
-		pq.elements[index], pq.elements[parentIndex] = pq.elements[parentIndex], pq.elements[index]
+		pq.heap[index], pq.heap[parentIndex] = pq.heap[parentIndex], pq.heap[index]
 		index = parentIndex
 	}
 }
 
-// 内部方法：下移操作，用于维护堆属性
-func (pq *PriorityQueue[E]) siftDown(index int) {
-	lastIndex := len(pq.elements) - 1
+// Internal method: heapify down operation to maintain heap property
+func (pq *PriorityQueue[E]) heapifyDown(index int) {
 	for {
-		smallestIndex := index
-		leftChildIndex := 2*index + 1
-		rightChildIndex := 2*index + 2
+		leftChild := 2*index + 1
+		rightChild := 2*index + 2
+		smallest := index
 
-		if leftChildIndex <= lastIndex && pq.compare(pq.elements[leftChildIndex], pq.elements[smallestIndex]) < 0 {
-			smallestIndex = leftChildIndex
+		if leftChild < len(pq.heap) && pq.comparator(pq.heap[leftChild], pq.heap[smallest]) < 0 {
+			smallest = leftChild
 		}
 
-		if rightChildIndex <= lastIndex && pq.compare(pq.elements[rightChildIndex], pq.elements[smallestIndex]) < 0 {
-			smallestIndex = rightChildIndex
+		if rightChild < len(pq.heap) && pq.comparator(pq.heap[rightChild], pq.heap[smallest]) < 0 {
+			smallest = rightChild
 		}
 
-		if smallestIndex == index {
+		if smallest == index {
 			break
 		}
 
-		pq.elements[index], pq.elements[smallestIndex] = pq.elements[smallestIndex], pq.elements[index]
-		index = smallestIndex
+		pq.heap[index], pq.heap[smallest] = pq.heap[smallest], pq.heap[index]
+		index = smallest
 	}
 }

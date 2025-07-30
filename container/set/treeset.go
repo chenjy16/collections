@@ -3,457 +3,493 @@ package set
 import (
 	"fmt"
 	"strings"
+
+	"github.com/chenjianyu/collections/container/common"
 )
 
-// Compare 比较两个可比较类型的值
-// 注意：此函数仅支持 int 类型，对于其他类型请使用自定义比较器
+// Compare compares two comparable type values
+// Note: This function only supports int type, for other types please use custom comparator
 func Compare[E any](a, b E) int {
-	// 尝试转换为 int 类型
+	// Try to convert to int type
 	cmpA, okA := any(a).(int)
 	cmpB, okB := any(b).(int)
 	if okA && okB {
 		if cmpA == cmpB {
 			return 0
-		}
-		if cmpA < cmpB {
+		} else if cmpA < cmpB {
 			return -1
+		} else {
+			return 1
 		}
-		return 1
 	}
-
-	// 尝试转换为 string 类型
-	strA, okA := any(a).(string)
-	strB, okB := any(b).(string)
-	if okA && okB {
-		if strA == strB {
-			return 0
-		}
-		if strA < strB {
-			return -1
-		}
-		return 1
-	}
-
-	// 对于不支持的类型，返回 0（相等）
-	// 这样可以避免 panic，但建议使用自定义比较器
+	// For non-int types, return 0 (equal)
 	return 0
 }
 
-// TreeSet 是一个基于红黑树的有序Set实现
+// TreeSet is a set implementation based on red-black tree
+// Elements are stored in sorted order
 type TreeSet[E comparable] struct {
-	comparator func(a, b E) int // 比较器函数
-	root       *treeNode[E]     // 根节点
-	size       int              // 元素数量
+	root       *treeNode[E]
+	size       int
+	comparator func(a, b E) int
 }
 
-// 红黑树节点颜色
-type color bool
-
-const (
-	red   color = true
-	black color = false
-)
-
-// treeNode 是红黑树的节点
+// treeNode represents a node in the red-black tree
 type treeNode[E comparable] struct {
 	value  E
+	color  bool // true for red, false for black
 	left   *treeNode[E]
 	right  *treeNode[E]
 	parent *treeNode[E]
-	color  color
 }
 
-// NewTreeSet 创建一个新的TreeSet，使用默认比较器
+// NewTreeSet creates a new TreeSet using default comparator
+// Default comparator only supports int type
 func NewTreeSet[E comparable]() *TreeSet[E] {
 	return &TreeSet[E]{
-		comparator: func(a, b E) int { return Compare(a, b) },
 		root:       nil,
 		size:       0,
+		comparator: Compare[E],
 	}
 }
 
-// NewTreeSetWithComparator 创建一个新的TreeSet，使用指定的比较器
+// NewTreeSetWithComparator creates a new TreeSet using custom comparator
 func NewTreeSetWithComparator[E comparable](comparator func(a, b E) int) *TreeSet[E] {
 	return &TreeSet[E]{
-		comparator: comparator,
 		root:       nil,
 		size:       0,
+		comparator: comparator,
 	}
 }
 
-// NewTreeSetFromSlice 从切片创建一个新的TreeSet
-func NewTreeSetFromSlice[E comparable](elements []E) *TreeSet[E] {
-	result := NewTreeSet[E]()
-	for _, e := range elements {
-		result.Add(e)
-	}
-	return result
+// Size returns the number of elements in the set
+func (ts *TreeSet[E]) Size() int {
+	return ts.size
 }
 
-// isRed 检查节点是否为红色
-func isRed[E comparable](node *treeNode[E]) bool {
-	if node == nil {
-		return false
-	}
-	return node.color == red
+// IsEmpty checks if the set is empty
+func (ts *TreeSet[E]) IsEmpty() bool {
+	return ts.size == 0
 }
 
-// rotateLeft 左旋转
-func (set *TreeSet[E]) rotateLeft(h *treeNode[E]) *treeNode[E] {
-	x := h.right
-	h.right = x.left
-	if x.left != nil {
-		x.left.parent = h
-	}
-	x.left = h
-	x.color = h.color
-	h.color = red
-	x.parent = h.parent
-	h.parent = x
-	return x
+// Clear clears all elements from the set
+func (ts *TreeSet[E]) Clear() {
+	ts.root = nil
+	ts.size = 0
 }
 
-// rotateRight 右旋转
-func (set *TreeSet[E]) rotateRight(h *treeNode[E]) *treeNode[E] {
-	x := h.left
-	h.left = x.right
-	if x.right != nil {
-		x.right.parent = h
-	}
-	x.right = h
-	x.color = h.color
-	h.color = red
-	x.parent = h.parent
-	h.parent = x
-	return x
+// Contains checks if the set contains the specified element
+func (ts *TreeSet[E]) Contains(element E) bool {
+	return ts.findNode(element) != nil
 }
 
-// flipColors 颜色翻转
-func (set *TreeSet[E]) flipColors(h *treeNode[E]) {
-	h.color = !h.color
-	if h.left != nil {
-		h.left.color = !h.left.color
-	}
-	if h.right != nil {
-		h.right.color = !h.right.color
-	}
-}
-
-// put 插入节点
-func (set *TreeSet[E]) put(h *treeNode[E], value E) (*treeNode[E], bool) {
-	if h == nil {
-		set.size++
-		return &treeNode[E]{value: value, color: red}, true
-	}
-
-	added := false
-	cmp := set.comparator(value, h.value)
-
-	if cmp < 0 {
-		h.left, added = set.put(h.left, value)
-		if h.left != nil {
-			h.left.parent = h
+// Add adds an element to the set
+// Returns false if the set already contains the element, otherwise returns true
+func (ts *TreeSet[E]) Add(element E) bool {
+	if ts.root == nil {
+		ts.root = &treeNode[E]{
+			value: element,
+			color: false, // root is always black
 		}
-	} else if cmp > 0 {
-		h.right, added = set.put(h.right, value)
-		if h.right != nil {
-			h.right.parent = h
-		}
-	} else {
-		// 值已存在，不添加
-		return h, false
+		ts.size++
+		return true
 	}
 
-	// 红黑树平衡调整
-	if isRed(h.right) && !isRed(h.left) {
-		h = set.rotateLeft(h)
-	}
-	if isRed(h.left) && isRed(h.left.left) {
-		h = set.rotateRight(h)
-	}
-	if isRed(h.left) && isRed(h.right) {
-		set.flipColors(h)
-	}
-
-	return h, added
-}
-
-// Add 添加一个元素到集合中
-func (set *TreeSet[E]) Add(e E) bool {
-	var added bool
-	set.root, added = set.put(set.root, e)
-	if set.root != nil {
-		set.root.color = black
-		set.root.parent = nil
-	}
-	return added
-}
-
-// findMin 查找最小节点
-func findMin[E comparable](h *treeNode[E]) *treeNode[E] {
-	if h == nil {
-		return nil
-	}
-	if h.left == nil {
-		return h
-	}
-	return findMin(h.left)
-}
-
-// moveRedLeft 将左子节点或其兄弟节点变红
-func (set *TreeSet[E]) moveRedLeft(h *treeNode[E]) *treeNode[E] {
-	set.flipColors(h)
-	if isRed(h.right.left) {
-		h.right = set.rotateRight(h.right)
-		h = set.rotateLeft(h)
-		set.flipColors(h)
-	}
-	return h
-}
-
-// moveRedRight 将右子节点或其兄弟节点变红
-func (set *TreeSet[E]) moveRedRight(h *treeNode[E]) *treeNode[E] {
-	set.flipColors(h)
-	if isRed(h.left.left) {
-		h = set.rotateRight(h)
-		set.flipColors(h)
-	}
-	return h
-}
-
-// balance 平衡节点
-func (set *TreeSet[E]) balance(h *treeNode[E]) *treeNode[E] {
-	if isRed(h.right) {
-		h = set.rotateLeft(h)
-	}
-	if isRed(h.left) && isRed(h.left.left) {
-		h = set.rotateRight(h)
-	}
-	if isRed(h.left) && isRed(h.right) {
-		set.flipColors(h)
-	}
-	return h
-}
-
-// removeMin 移除最小节点
-func (set *TreeSet[E]) removeMin(h *treeNode[E]) *treeNode[E] {
-	if h.left == nil {
-		return nil
-	}
-
-	if !isRed(h.left) && !isRed(h.left.left) {
-		h = set.moveRedLeft(h)
-	}
-
-	h.left = set.removeMin(h.left)
-	if h.left != nil {
-		h.left.parent = h
-	}
-
-	return set.balance(h)
-}
-
-// remove 移除节点
-func (set *TreeSet[E]) remove(h *treeNode[E], value E) (*treeNode[E], bool) {
-	if h == nil {
-		return nil, false
-	}
-
-	removed := false
-	cmp := set.comparator(value, h.value)
-
-	if cmp < 0 {
-		if h.left == nil {
-			return h, false
-		}
-		if !isRed(h.left) && !isRed(h.left.left) {
-			h = set.moveRedLeft(h)
-		}
-		h.left, removed = set.remove(h.left, value)
-		if h.left != nil {
-			h.left.parent = h
-		}
-	} else {
-		if isRed(h.left) {
-			h = set.rotateRight(h)
-		}
-		if cmp == 0 && h.right == nil {
-			set.size--
-			return nil, true
-		}
-		if !isRed(h.right) && h.right != nil && !isRed(h.right.left) {
-			h = set.moveRedRight(h)
-		}
+	node := ts.root
+	for {
+		cmp := ts.comparator(element, node.value)
 		if cmp == 0 {
-			minNode := findMin(h.right)
-			h.value = minNode.value
-			h.right = set.removeMin(h.right)
-			if h.right != nil {
-				h.right.parent = h
+			return false // element already exists
+		} else if cmp < 0 {
+			if node.left == nil {
+				newNode := &treeNode[E]{
+					value:  element,
+					color:  true, // new node is red
+					parent: node,
+				}
+				node.left = newNode
+				ts.insertFixup(newNode)
+				ts.size++
+				return true
 			}
-			removed = true
-			set.size--
+			node = node.left
 		} else {
-			h.right, removed = set.remove(h.right, value)
-			if h.right != nil {
-				h.right.parent = h
+			if node.right == nil {
+				newNode := &treeNode[E]{
+					value:  element,
+					color:  true, // new node is red
+					parent: node,
+				}
+				node.right = newNode
+				ts.insertFixup(newNode)
+				ts.size++
+				return true
 			}
+			node = node.right
 		}
 	}
-
-	return set.balance(h), removed
 }
 
-// Remove 从集合中移除指定元素
-func (set *TreeSet[E]) Remove(e E) bool {
-	if !set.Contains(e) {
+// Remove removes the specified element from the set
+// Returns true if the set contained the element, otherwise returns false
+func (ts *TreeSet[E]) Remove(element E) bool {
+	node := ts.findNode(element)
+	if node == nil {
 		return false
 	}
 
-	if !isRed(set.root.left) && !isRed(set.root.right) {
-		set.root.color = red
-	}
-
-	var removed bool
-	set.root, removed = set.remove(set.root, e)
-	if set.root != nil {
-		set.root.color = black
-	}
-
-	return removed
+	ts.deleteNode(node)
+	ts.size--
+	return true
 }
 
-// find 查找节点
-func (set *TreeSet[E]) find(h *treeNode[E], value E) *treeNode[E] {
-	if h == nil {
-		return nil
-	}
-
-	cmp := set.comparator(value, h.value)
-	if cmp < 0 {
-		return set.find(h.left, value)
-	} else if cmp > 0 {
-		return set.find(h.right, value)
-	} else {
-		return h
-	}
-}
-
-// Contains 检查集合是否包含指定元素
-func (set *TreeSet[E]) Contains(e E) bool {
-	return set.find(set.root, e) != nil
-}
-
-// Size 返回集合中的元素数量
-func (set *TreeSet[E]) Size() int {
-	return set.size
-}
-
-// IsEmpty 检查集合是否为空
-func (set *TreeSet[E]) IsEmpty() bool {
-	return set.size == 0
-}
-
-// Clear 清空集合
-func (set *TreeSet[E]) Clear() {
-	set.root = nil
-	set.size = 0
-}
-
-// inOrderTraversal 中序遍历
-func inOrderTraversal[E comparable](node *treeNode[E], result *[]E) {
-	if node == nil {
-		return
-	}
-	inOrderTraversal(node.left, result)
-	*result = append(*result, node.value)
-	inOrderTraversal(node.right, result)
-}
-
-// ToSlice 返回包含集合所有元素的有序切片
-func (set *TreeSet[E]) ToSlice() []E {
-	result := make([]E, 0, set.size)
-	inOrderTraversal(set.root, &result)
+// ToSlice returns a slice containing all elements in the set
+func (ts *TreeSet[E]) ToSlice() []E {
+	result := make([]E, 0, ts.size)
+	ts.inorderTraversal(ts.root, func(value E) {
+		result = append(result, value)
+	})
 	return result
 }
 
-// ForEach 对集合中的每个元素执行给定的操作（按顺序）
-func (set *TreeSet[E]) ForEach(f func(E)) {
-	elements := set.ToSlice()
-	for _, e := range elements {
-		f(e)
+// Union returns a new set containing all elements from this set and the other set
+func (ts *TreeSet[E]) Union(other Set[E]) Set[E] {
+	result := NewTreeSetWithComparator(ts.comparator)
+	ts.ForEach(func(element E) {
+		result.Add(element)
+	})
+	other.ForEach(func(element E) {
+		result.Add(element)
+	})
+	return result
+}
+
+// Intersection returns a new set containing elements that exist in both sets
+func (ts *TreeSet[E]) Intersection(other Set[E]) Set[E] {
+	result := NewTreeSetWithComparator(ts.comparator)
+	ts.ForEach(func(element E) {
+		if other.Contains(element) {
+			result.Add(element)
+		}
+	})
+	return result
+}
+
+// Difference returns a new set containing elements that exist in this set but not in the other set
+func (ts *TreeSet[E]) Difference(other Set[E]) Set[E] {
+	result := NewTreeSetWithComparator(ts.comparator)
+	ts.ForEach(func(element E) {
+		if !other.Contains(element) {
+			result.Add(element)
+		}
+	})
+	return result
+}
+
+// IsSubsetOf checks if this set is a subset of the other set
+func (ts *TreeSet[E]) IsSubsetOf(other Set[E]) bool {
+	if ts.Size() > other.Size() {
+		return false
+	}
+
+	isSubset := true
+	ts.ForEach(func(element E) {
+		if !other.Contains(element) {
+			isSubset = false
+		}
+	})
+	return isSubset
+}
+
+// IsSupersetOf checks if this set is a superset of the other set
+func (ts *TreeSet[E]) IsSupersetOf(other Set[E]) bool {
+	return other.IsSubsetOf(ts)
+}
+
+// ForEach executes the given operation for each element in the set
+func (ts *TreeSet[E]) ForEach(fn func(E)) {
+	ts.inorderTraversal(ts.root, fn)
+}
+
+// Iterator returns an iterator for the set
+func (ts *TreeSet[E]) Iterator() common.Iterator[E] {
+	elements := ts.ToSlice()
+	return &treeSetIterator[E]{
+		elements: elements,
+		index:    0,
 	}
 }
 
-// AddAll 将指定集合中的所有元素添加到此集合
-func (set *TreeSet[E]) AddAll(other Set[E]) bool {
-	modified := false
-	other.ForEach(func(e E) {
-		if set.Add(e) {
-			modified = true
-		}
-	})
-	return modified
+// treeSetIterator implements Iterator for TreeSet
+type treeSetIterator[E comparable] struct {
+	elements []E
+	index    int
 }
 
-// RemoveAll 移除此集合中也包含在指定集合中的所有元素
-func (set *TreeSet[E]) RemoveAll(other Set[E]) bool {
-	modified := false
-	other.ForEach(func(e E) {
-		if set.Remove(e) {
-			modified = true
-		}
-	})
-	return modified
+// HasNext returns true if there are more elements to iterate
+func (it *treeSetIterator[E]) HasNext() bool {
+	return it.index < len(it.elements)
 }
 
-// RetainAll 仅保留此集合中包含在指定集合中的元素
-func (set *TreeSet[E]) RetainAll(other Set[E]) bool {
-	modified := false
-	toRemove := make([]E, 0)
+// Next returns the next element
+func (it *treeSetIterator[E]) Next() (E, bool) {
+	if !it.HasNext() {
+		var zero E
+		return zero, false
+	}
+	element := it.elements[it.index]
+	it.index++
+	return element, true
+}
 
-	set.ForEach(func(e E) {
-		if !other.Contains(e) {
-			toRemove = append(toRemove, e)
-			modified = true
-		}
-	})
+// Remove removes the current element (not supported)
+func (it *treeSetIterator[E]) Remove() bool {
+	return false // Not supported
+}
 
-	for _, e := range toRemove {
-		set.Remove(e)
+// String returns the string representation of the set
+func (ts *TreeSet[E]) String() string {
+	if ts.IsEmpty() {
+		return "{}"
 	}
 
-	return modified
-}
-
-// ContainsAll 如果此集合包含指定集合中的所有元素，返回true
-func (set *TreeSet[E]) ContainsAll(other Set[E]) bool {
-	containsAll := true
-	other.ForEach(func(e E) {
-		if !set.Contains(e) {
-			containsAll = false
-		}
-	})
-	return containsAll
-}
-
-// String 返回集合的字符串表示
-func (set *TreeSet[E]) String() string {
-	if set.IsEmpty() {
-		return "[]"
-	}
-
-	elements := set.ToSlice()
 	var sb strings.Builder
-	sb.WriteString("[")
+	sb.WriteString("{")
 
-	for i, e := range elements {
-		if i > 0 {
+	first := true
+	ts.ForEach(func(element E) {
+		if !first {
 			sb.WriteString(", ")
 		}
-		sb.WriteString(fmt.Sprintf("%v", e))
+		sb.WriteString(fmt.Sprintf("%v", element))
+		first = false
+	})
+
+	sb.WriteString("}")
+	return sb.String()
+}
+
+// Internal method: find node with specified value
+func (ts *TreeSet[E]) findNode(element E) *treeNode[E] {
+	node := ts.root
+	for node != nil {
+		cmp := ts.comparator(element, node.value)
+		if cmp == 0 {
+			return node
+		} else if cmp < 0 {
+			node = node.left
+		} else {
+			node = node.right
+		}
+	}
+	return nil
+}
+
+// Internal method: in-order traversal
+func (ts *TreeSet[E]) inorderTraversal(node *treeNode[E], fn func(E)) {
+	if node != nil {
+		ts.inorderTraversal(node.left, fn)
+		fn(node.value)
+		ts.inorderTraversal(node.right, fn)
+	}
+}
+
+// Internal method: left rotation
+func (ts *TreeSet[E]) rotateLeft(node *treeNode[E]) {
+	right := node.right
+	node.right = right.left
+	if right.left != nil {
+		right.left.parent = node
+	}
+	right.parent = node.parent
+	if node.parent == nil {
+		ts.root = right
+	} else if node == node.parent.left {
+		node.parent.left = right
+	} else {
+		node.parent.right = right
+	}
+	right.left = node
+	node.parent = right
+}
+
+// Internal method: right rotation
+func (ts *TreeSet[E]) rotateRight(node *treeNode[E]) {
+	left := node.left
+	node.left = left.right
+	if left.right != nil {
+		left.right.parent = node
+	}
+	left.parent = node.parent
+	if node.parent == nil {
+		ts.root = left
+	} else if node == node.parent.right {
+		node.parent.right = left
+	} else {
+		node.parent.left = left
+	}
+	left.right = node
+	node.parent = left
+}
+
+// Internal method: fix red-black tree properties after insertion
+func (ts *TreeSet[E]) insertFixup(node *treeNode[E]) {
+	for node.parent != nil && node.parent.color {
+		if node.parent == node.parent.parent.left {
+			uncle := node.parent.parent.right
+			if uncle != nil && uncle.color {
+				node.parent.color = false
+				uncle.color = false
+				node.parent.parent.color = true
+				node = node.parent.parent
+			} else {
+				if node == node.parent.right {
+					node = node.parent
+					ts.rotateLeft(node)
+				}
+				node.parent.color = false
+				node.parent.parent.color = true
+				ts.rotateRight(node.parent.parent)
+			}
+		} else {
+			uncle := node.parent.parent.left
+			if uncle != nil && uncle.color {
+				node.parent.color = false
+				uncle.color = false
+				node.parent.parent.color = true
+				node = node.parent.parent
+			} else {
+				if node == node.parent.left {
+					node = node.parent
+					ts.rotateRight(node)
+				}
+				node.parent.color = false
+				node.parent.parent.color = true
+				ts.rotateLeft(node.parent.parent)
+			}
+		}
+	}
+	ts.root.color = false
+}
+
+// Internal method: delete node
+func (ts *TreeSet[E]) deleteNode(node *treeNode[E]) {
+	var y *treeNode[E]
+	var x *treeNode[E]
+
+	if node.left == nil || node.right == nil {
+		y = node
+	} else {
+		y = ts.successor(node)
 	}
 
-	sb.WriteString("]")
-	return sb.String()
+	if y.left != nil {
+		x = y.left
+	} else {
+		x = y.right
+	}
+
+	if x != nil {
+		x.parent = y.parent
+	}
+
+	if y.parent == nil {
+		ts.root = x
+	} else if y == y.parent.left {
+		y.parent.left = x
+	} else {
+		y.parent.right = x
+	}
+
+	if y != node {
+		node.value = y.value
+	}
+
+	if !y.color && x != nil {
+		ts.deleteFixup(x)
+	}
+}
+
+// Internal method: find successor node
+func (ts *TreeSet[E]) successor(node *treeNode[E]) *treeNode[E] {
+	if node.right != nil {
+		node = node.right
+		for node.left != nil {
+			node = node.left
+		}
+		return node
+	}
+
+	parent := node.parent
+	for parent != nil && node == parent.right {
+		node = parent
+		parent = parent.parent
+	}
+	return parent
+}
+
+// Internal method: fix red-black tree properties after deletion
+func (ts *TreeSet[E]) deleteFixup(node *treeNode[E]) {
+	for node != ts.root && !node.color {
+		if node == node.parent.left {
+			sibling := node.parent.right
+			if sibling.color {
+				sibling.color = false
+				node.parent.color = true
+				ts.rotateLeft(node.parent)
+				sibling = node.parent.right
+			}
+			if (sibling.left == nil || !sibling.left.color) &&
+				(sibling.right == nil || !sibling.right.color) {
+				sibling.color = true
+				node = node.parent
+			} else {
+				if sibling.right == nil || !sibling.right.color {
+					if sibling.left != nil {
+						sibling.left.color = false
+					}
+					sibling.color = true
+					ts.rotateRight(sibling)
+					sibling = node.parent.right
+				}
+				sibling.color = node.parent.color
+				node.parent.color = false
+				if sibling.right != nil {
+					sibling.right.color = false
+				}
+				ts.rotateLeft(node.parent)
+				node = ts.root
+			}
+		} else {
+			sibling := node.parent.left
+			if sibling.color {
+				sibling.color = false
+				node.parent.color = true
+				ts.rotateRight(node.parent)
+				sibling = node.parent.left
+			}
+			if (sibling.right == nil || !sibling.right.color) &&
+				(sibling.left == nil || !sibling.left.color) {
+				sibling.color = true
+				node = node.parent
+			} else {
+				if sibling.left == nil || !sibling.left.color {
+					if sibling.right != nil {
+						sibling.right.color = false
+					}
+					sibling.color = true
+					ts.rotateLeft(sibling)
+					sibling = node.parent.left
+				}
+				sibling.color = node.parent.color
+				node.parent.color = false
+				if sibling.left != nil {
+					sibling.left.color = false
+				}
+				ts.rotateRight(node.parent)
+				node = ts.root
+			}
+		}
+	}
+	node.color = false
 }

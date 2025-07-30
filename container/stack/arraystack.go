@@ -1,4 +1,4 @@
-// Package stack 提供栈数据结构的实现
+// Package stack provides stack data structure implementations
 package stack
 
 import (
@@ -7,146 +7,143 @@ import (
 	"strings"
 )
 
-var (
-	// ErrEmptyStack 表示栈为空错误
-	ErrEmptyStack = errors.New("stack is empty")
+// ErrEmptyStack indicates that the stack is empty
+var ErrEmptyStack = errors.New("stack is empty")
 
-	// ErrFullStack 表示栈已满错误
-	ErrFullStack = errors.New("stack is full")
-)
+// ErrFullStack indicates that the stack is full
+var ErrFullStack = errors.New("stack is full")
 
-// ArrayStack 是一个基于切片的栈实现
-type ArrayStack[E comparable] struct {
+// ArrayStack is a stack implementation based on slices
+type ArrayStack[E any] struct {
 	elements []E
-	maxCap   int // 最大容量，0表示无界
+	maxCap   int // Maximum capacity, 0 means unbounded
 }
 
-// New 创建一个新的无界ArrayStack
-func New[E comparable]() *ArrayStack[E] {
+// New creates a new unbounded ArrayStack
+func New[E any]() *ArrayStack[E] {
 	return &ArrayStack[E]{
 		elements: make([]E, 0),
 		maxCap:   0,
 	}
 }
 
-// WithCapacity 创建一个具有指定最大容量的ArrayStack
-func WithCapacity[E comparable](maxCapacity int) *ArrayStack[E] {
+// WithCapacity creates an ArrayStack with specified maximum capacity
+func WithCapacity[E any](capacity int) *ArrayStack[E] {
 	return &ArrayStack[E]{
-		elements: make([]E, 0, maxCapacity),
-		maxCap:   maxCapacity,
+		elements: make([]E, 0, capacity),
+		maxCap:   capacity,
 	}
 }
 
-// FromSlice 从切片创建一个新的ArrayStack
-// 切片中的第一个元素将是栈底元素，最后一个元素将是栈顶元素
-func FromSlice[E comparable](elements []E) *ArrayStack[E] {
-	stack := New[E]()
-	stack.elements = make([]E, len(elements))
-	copy(stack.elements, elements)
-	return stack
+// FromSlice creates a new ArrayStack from a slice
+// The first element in the slice will be the bottom element, the last element will be the top element
+func FromSlice[E any](slice []E) *ArrayStack[E] {
+	elements := make([]E, len(slice))
+	copy(elements, slice)
+	return &ArrayStack[E]{
+		elements: elements,
+		maxCap:   0,
+	}
 }
 
-// Size 返回栈中的元素数量
+// Size returns the number of elements in the stack
 func (s *ArrayStack[E]) Size() int {
 	return len(s.elements)
 }
 
-// IsEmpty 检查栈是否为空
+// IsEmpty checks if the stack is empty
 func (s *ArrayStack[E]) IsEmpty() bool {
 	return len(s.elements) == 0
 }
 
-// isFull 检查栈是否已满
+// isFull checks if the stack is full
 func (s *ArrayStack[E]) isFull() bool {
 	return s.maxCap > 0 && len(s.elements) >= s.maxCap
 }
 
-// Clear 清空栈
+// Clear empties the stack
 func (s *ArrayStack[E]) Clear() {
 	s.elements = s.elements[:0]
 }
 
-// Contains 检查栈是否包含指定元素
-func (s *ArrayStack[E]) Contains(e E) bool {
-	for _, v := range s.elements {
-		if v == e {
+// Contains checks if the stack contains the specified element
+func (s *ArrayStack[E]) Contains(element E) bool {
+	for _, e := range s.elements {
+		if any(e) == any(element) {
 			return true
 		}
 	}
 	return false
 }
 
-// ForEach 对栈中的每个元素执行给定的操作
-// 遍历顺序是从栈底到栈顶
-func (s *ArrayStack[E]) ForEach(f func(E)) {
-	for _, e := range s.elements {
-		f(e)
+// ForEach executes the given operation on each element in the stack
+// Traversal order is from bottom to top
+func (s *ArrayStack[E]) ForEach(fn func(E)) {
+	for _, element := range s.elements {
+		fn(element)
 	}
 }
 
-// String 返回栈的字符串表示
+// String returns the string representation of the stack
 func (s *ArrayStack[E]) String() string {
 	if s.IsEmpty() {
 		return "[]"
 	}
 
-	var sb strings.Builder
-	sb.WriteString("[")
-
-	for i, e := range s.elements {
-		sb.WriteString(fmt.Sprintf("%v", e))
-		if i < len(s.elements)-1 {
-			sb.WriteString(", ")
+	var builder strings.Builder
+	builder.WriteString("[")
+	for i, element := range s.elements {
+		if i > 0 {
+			builder.WriteString(", ")
 		}
+		builder.WriteString(fmt.Sprintf("%v", element))
 	}
-
-	sb.WriteString("]")
-	return sb.String()
+	builder.WriteString("]")
+	return builder.String()
 }
 
-// Push 将元素推入栈顶
-func (s *ArrayStack[E]) Push(e E) error {
+// Push pushes an element onto the top of the stack
+func (s *ArrayStack[E]) Push(element E) error {
 	if s.isFull() {
 		return ErrFullStack
 	}
-
-	s.elements = append(s.elements, e)
+	s.elements = append(s.elements, element)
 	return nil
 }
 
-// Pop 移除并返回栈顶的元素
+// Pop removes and returns the element at the top of the stack
 func (s *ArrayStack[E]) Pop() (E, error) {
 	if s.IsEmpty() {
-		return *new(E), ErrEmptyStack
+		var zero E
+		return zero, ErrEmptyStack
 	}
 
-	lastIndex := len(s.elements) - 1
-	result := s.elements[lastIndex]
-	s.elements = s.elements[:lastIndex]
-
-	return result, nil
+	index := len(s.elements) - 1
+	element := s.elements[index]
+	s.elements = s.elements[:index]
+	return element, nil
 }
 
-// Peek 返回栈顶的元素，但不移除
+// Peek returns the element at the top of the stack without removing it
 func (s *ArrayStack[E]) Peek() (E, error) {
 	if s.IsEmpty() {
-		return *new(E), ErrEmptyStack
+		var zero E
+		return zero, ErrEmptyStack
 	}
-
 	return s.elements[len(s.elements)-1], nil
 }
 
-// Search 搜索元素在栈中的位置
-func (s *ArrayStack[E]) Search(e E) int {
+// Search searches for an element in the stack
+func (s *ArrayStack[E]) Search(element E) int {
 	for i := len(s.elements) - 1; i >= 0; i-- {
-		if s.elements[i] == e {
+		if any(s.elements[i]) == any(element) {
 			return len(s.elements) - i
 		}
 	}
 	return -1
 }
 
-// ToSlice 返回包含栈中所有元素的切片
+// ToSlice returns a slice containing all elements in the stack
 func (s *ArrayStack[E]) ToSlice() []E {
 	result := make([]E, len(s.elements))
 	copy(result, s.elements)

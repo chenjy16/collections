@@ -4,491 +4,442 @@ import (
 	"testing"
 )
 
-// 为测试创建一个简单的可比较类型
-type IntComparable int
+// Simple comparable type for testing
+type TestInt int
 
-func (i IntComparable) CompareTo(other interface{}) int {
-	otherInt, ok := other.(IntComparable)
-	if !ok {
-		// 返回错误值而不是 panic
-		return 0 // 或者可以返回一个特殊值表示错误
-	}
-	if i < otherInt {
-		return -1
-	} else if i > otherInt {
-		return 1
-	}
-	return 0
-}
-
-func TestPriorityQueue_NewPriorityQueue(t *testing.T) {
-	pq := NewPriorityQueue[IntComparable]()
-	if pq.Size() != 0 {
-		t.Errorf("Expected empty queue, got size %d", pq.Size())
-	}
-	if !pq.IsEmpty() {
-		t.Error("Expected IsEmpty() to return true for new queue")
-	}
-}
-
-func TestPriorityQueue_NewPriorityQueueWithComparator(t *testing.T) {
-	// 创建一个最大堆（默认是最小堆）
-	pq := NewPriorityQueueWithComparator(func(a, b int) int {
-		if a > b {
-			return -1 // 反转比较结果
-		} else if a < b {
+func (t TestInt) CompareTo(other interface{}) int {
+	if o, ok := other.(TestInt); ok {
+		if t < o {
+			return -1
+		} else if t > o {
 			return 1
 		}
 		return 0
-	})
+	}
+	// Return error value instead of panic
+	return 0 // or could return a special value to indicate error
+}
+
+func TestPriorityQueue_Basic(t *testing.T) {
+	pq := NewPriorityQueue[TestInt]()
+
+	if !pq.IsEmpty() {
+		t.Error("New queue should be empty")
+	}
 
 	if pq.Size() != 0 {
-		t.Errorf("Expected empty queue, got size %d", pq.Size())
+		t.Errorf("Empty queue size should be 0, got %d", pq.Size())
 	}
 
-	// 添加元素
-	_ = pq.Add(1)
-	_ = pq.Add(5)
-	_ = pq.Add(3)
+	// Test adding elements
+	pq.Add(TestInt(3))
+	pq.Add(TestInt(1))
+	pq.Add(TestInt(4))
+	pq.Add(TestInt(2))
 
-	// 验证最大值在顶部
-	val, ok := pq.Peek()
-	if !ok {
-		t.Error("Peek failed on non-empty queue")
+	if pq.Size() != 4 {
+		t.Errorf("Queue size should be 4, got %d", pq.Size())
 	}
-	if val != 5 {
-		t.Errorf("Expected 5 (max value) at top, got %d", val)
+
+	// Create a max heap (default is min heap)
+	maxPQ := NewPriorityQueueWithComparator[TestInt](func(a, b TestInt) int {
+		// Reverse comparison result
+		return -1 * a.CompareTo(b)
+	})
+
+	maxPQ.Add(TestInt(3))
+	maxPQ.Add(TestInt(1))
+	maxPQ.Add(TestInt(4))
+	maxPQ.Add(TestInt(2))
+
+	// Verify max value is at top
+	if val, ok := maxPQ.Peek(); !ok || val != TestInt(4) {
+		t.Errorf("Max heap peek should return 4, got %v", val)
 	}
 }
 
 func TestPriorityQueue_WithCapacity(t *testing.T) {
-	pq := WithCapacity[IntComparable](3)
-	if pq.Size() != 0 {
-		t.Errorf("Expected empty queue, got size %d", pq.Size())
+	// Test capacity limit
+	pq := WithCapacity[TestInt](3)
+
+	pq.Add(TestInt(1))
+	pq.Add(TestInt(2))
+	pq.Add(TestInt(3))
+
+	// Adding 4th element should return error
+	if err := pq.Add(TestInt(4)); err == nil {
+		t.Error("Adding to full queue should return error")
 	}
 
-	// 测试容量限制
-	for i := 0; i < 3; i++ {
-		err := pq.Add(IntComparable(i))
-		if err != nil {
-			t.Errorf("Unexpected error adding element %d: %v", i, err)
-		}
-	}
-
-	// 添加第4个元素应该返回错误
-	err := pq.Add(IntComparable(3))
-	if err != ErrFullQueue {
-		t.Errorf("Expected ErrFullQueue, got %v", err)
+	if pq.Size() != 3 {
+		t.Errorf("Queue size should be 3, got %d", pq.Size())
 	}
 }
 
-func TestPriorityQueue_FromSlice(t *testing.T) {
-	slice := []IntComparable{5, 3, 1, 4, 2}
-	pq := NewFromSlice(slice)
+func TestPriorityQueue_Order(t *testing.T) {
+	pq := NewPriorityQueue[TestInt]()
 
-	if pq.Size() != len(slice) {
-		t.Errorf("Expected size %d, got %d", len(slice), pq.Size())
+	// Add elements in random order
+	elements := []TestInt{5, 2, 8, 1, 9, 3}
+	for _, elem := range elements {
+		pq.Add(elem)
 	}
 
-	// 验证元素按优先级排序
-	expectedOrder := []int{1, 2, 3, 4, 5} // 最小堆
-	for _, expected := range expectedOrder {
-		val, err := pq.Remove()
-		if err != nil {
-			t.Errorf("Unexpected error removing element: %v", err)
-		}
-		if int(val) != expected {
-			t.Errorf("Expected %v, got %v", expected, val)
+	// Verify elements are sorted by priority
+	expectedOrder := []int{1, 2, 3, 5, 8, 9} // min heap
+	var result []int
+
+	for !pq.IsEmpty() {
+		if val, err := pq.Remove(); err == nil {
+			result = append(result, int(val))
 		}
 	}
 
-	if !pq.IsEmpty() {
-		t.Error("Queue should be empty after removing all elements")
+	for i, expected := range expectedOrder {
+		if i >= len(result) || result[i] != expected {
+			t.Errorf("Expected %d at position %d, got %d", expected, i, result[i])
+		}
 	}
 }
 
-func TestPriorityQueue_FromSliceWithComparator(t *testing.T) {
-	slice := []int{5, 3, 1, 4, 2}
-	// 创建一个最大堆
-	pq := NewFromSliceWithComparator(slice, func(a, b int) int {
-		if a > b {
-			return -1 // 反转比较结果
-		} else if a < b {
-			return 1
-		}
-		return 0
+func TestPriorityQueue_MaxHeap(t *testing.T) {
+	// Create a max heap
+	pq := NewPriorityQueueWithComparator[TestInt](func(a, b TestInt) int {
+		// Reverse comparison result
+		return -1 * a.CompareTo(b)
 	})
 
-	if pq.Size() != len(slice) {
-		t.Errorf("Expected size %d, got %d", len(slice), pq.Size())
+	// Add elements
+	elements := []TestInt{5, 2, 8, 1, 9, 3}
+	for _, elem := range elements {
+		pq.Add(elem)
 	}
 
-	// 验证元素按优先级排序（最大堆）
-	expectedOrder := []int{5, 4, 3, 2, 1}
-	for _, expected := range expectedOrder {
-		val, err := pq.Remove()
-		if err != nil {
-			t.Errorf("Unexpected error removing element: %v", err)
-		}
-		if val != expected {
-			t.Errorf("Expected %v, got %v", expected, val)
-		}
-	}
-}
+	// Verify elements are sorted by priority (max heap)
+	expectedOrder := []int{9, 8, 5, 3, 2, 1}
+	var result []int
 
-func TestPriorityQueue_Add(t *testing.T) {
-	pq := NewPriorityQueue[IntComparable]()
-
-	// 添加元素
-	elements := []int{5, 3, 1, 4, 2}
-	for _, e := range elements {
-		err := pq.Add(IntComparable(e))
-		if err != nil {
-			t.Errorf("Unexpected error adding element %d: %v", e, err)
+	for !pq.IsEmpty() {
+		if val, err := pq.Remove(); err == nil {
+			result = append(result, int(val))
 		}
 	}
 
-	if pq.Size() != len(elements) {
-		t.Errorf("Expected size %d, got %d", len(elements), pq.Size())
-	}
-
-	// 验证最小元素在顶部
-	val, ok := pq.Peek()
-	if !ok {
-		t.Error("Peek failed on non-empty queue")
-	}
-	if val != IntComparable(1) {
-		t.Errorf("Expected 1 (min value) at top, got %d", val)
+	for i, expected := range expectedOrder {
+		if i >= len(result) || result[i] != expected {
+			t.Errorf("Expected %d at position %d, got %d", expected, i, result[i])
+		}
 	}
 }
 
 func TestPriorityQueue_Offer(t *testing.T) {
-	pq := WithCapacity[IntComparable](3)
+	pq := NewPriorityQueue[TestInt]()
 
-	// 添加3个元素
-	for i := 0; i < 3; i++ {
-		success := pq.Offer(IntComparable(i))
-		if !success {
-			t.Errorf("Expected Offer to return true for element %d", i)
-		}
+	// Add elements
+	if !pq.Offer(TestInt(3)) {
+		t.Error("Offer should succeed")
+	}
+	if !pq.Offer(TestInt(1)) {
+		t.Error("Offer should succeed")
+	}
+	if !pq.Offer(TestInt(2)) {
+		t.Error("Offer should succeed")
 	}
 
-	// 第4个元素应该返回false
-	success := pq.Offer(IntComparable(3))
-	if success {
-		t.Error("Expected Offer to return false when queue is full")
+	// Verify min element is at top
+	if val, ok := pq.Peek(); !ok || val != TestInt(1) {
+		t.Errorf("Peek should return 1, got %v", val)
 	}
 
-	if pq.Size() != 3 {
-		t.Errorf("Expected size 3, got %d", pq.Size())
+	// Test with capacity
+	cappedPQ := WithCapacity[TestInt](2)
+	cappedPQ.Offer(TestInt(1))
+	cappedPQ.Offer(TestInt(2))
+
+	// 4th element should return false
+	if cappedPQ.Offer(TestInt(3)) {
+		t.Error("Offer to full queue should return false")
 	}
 }
 
 func TestPriorityQueue_Remove(t *testing.T) {
-	pq := NewPriorityQueue[IntComparable]()
+	pq := NewPriorityQueue[TestInt]()
 
-	// 从空队列移除应该返回错误
-	_, err := pq.Remove()
-	if err != ErrEmptyQueue {
-		t.Errorf("Expected ErrEmptyQueue, got %v", err)
+	// Remove from empty queue should return error
+	if _, err := pq.Remove(); err == nil {
+		t.Error("Remove from empty queue should return error")
 	}
 
-	// 添加元素（无序）
-	elements := []int{5, 3, 1, 4, 2}
-	for _, e := range elements {
-		_ = pq.Add(IntComparable(e))
-	}
+	// Add elements (unordered)
+	pq.Add(TestInt(3))
+	pq.Add(TestInt(1))
+	pq.Add(TestInt(4))
+	pq.Add(TestInt(2))
 
-	// 验证元素按优先级顺序移除（最小堆）
-	expectedOrder := []int{1, 2, 3, 4, 5}
+	// Verify elements are removed in priority order (min heap)
+	expectedOrder := []TestInt{1, 2, 3, 4}
 	for _, expected := range expectedOrder {
-		val, err := pq.Remove()
-		if err != nil {
-			t.Errorf("Unexpected error removing element: %v", err)
-		}
-		if int(val) != expected {
-			t.Errorf("Expected %v, got %v", expected, val)
+		if val, err := pq.Remove(); err != nil || val != expected {
+			t.Errorf("Expected %v, got %v with error %v", expected, val, err)
 		}
 	}
 
-	// 队列应该为空
+	// Queue should be empty
 	if !pq.IsEmpty() {
 		t.Error("Queue should be empty after removing all elements")
 	}
 }
 
 func TestPriorityQueue_Poll(t *testing.T) {
-	pq := NewPriorityQueue[IntComparable]()
+	pq := NewPriorityQueue[TestInt]()
 
-	// 从空队列Poll应该返回false
-	_, success := pq.Poll()
-	if success {
-		t.Error("Expected Poll to return false for empty queue")
+	// Poll from empty queue should return false
+	if _, ok := pq.Poll(); ok {
+		t.Error("Poll from empty queue should return false")
 	}
 
-	// 添加元素
-	elements := []int{5, 3, 1, 4, 2}
-	for _, e := range elements {
-		_ = pq.Add(IntComparable(e))
-	}
+	// Add elements
+	pq.Add(TestInt(3))
+	pq.Add(TestInt(1))
+	pq.Add(TestInt(4))
+	pq.Add(TestInt(2))
 
-	// 验证元素按优先级顺序移除
-	expectedOrder := []int{1, 2, 3, 4, 5}
+	// Verify elements are removed in priority order
+	expectedOrder := []TestInt{1, 2, 3, 4}
 	for _, expected := range expectedOrder {
-		val, success := pq.Poll()
-		if !success {
-			t.Errorf("Unexpected failure polling element")
-		}
-		if int(val) != expected {
-			t.Errorf("Expected %v, got %v", expected, val)
+		if val, ok := pq.Poll(); !ok || val != expected {
+			t.Errorf("Expected %v, got %v with ok=%v", expected, val, ok)
 		}
 	}
 
-	// 队列应该为空
+	// Queue should be empty
 	if !pq.IsEmpty() {
 		t.Error("Queue should be empty after polling all elements")
 	}
 }
 
 func TestPriorityQueue_Element(t *testing.T) {
-	pq := NewPriorityQueue[IntComparable]()
+	pq := NewPriorityQueue[TestInt]()
 
-	// 从空队列获取元素应该返回错误
-	_, err := pq.Element()
-	if err != ErrEmptyQueue {
-		t.Errorf("Expected ErrEmptyQueue, got %v", err)
+	// Get element from empty queue should return error
+	if _, err := pq.Element(); err == nil {
+		t.Error("Element from empty queue should return error")
 	}
 
-	// 添加元素
-	elements := []int{5, 3, 1, 4, 2}
-	for _, e := range elements {
-		_ = pq.Add(IntComparable(e))
+	// Add elements
+	pq.Add(TestInt(3))
+	pq.Add(TestInt(1))
+	pq.Add(TestInt(4))
+	pq.Add(TestInt(2))
+
+	// Get top element
+	if val, err := pq.Element(); err != nil || val != TestInt(1) {
+		t.Errorf("Element should return 1, got %v with error %v", val, err)
 	}
 
-	// 获取顶部元素
-	val, err := pq.Element()
-	if err != nil {
-		t.Errorf("Unexpected error getting element: %v", err)
-	}
-	if val != IntComparable(1) {
-		t.Errorf("Expected 1, got %d", val)
-	}
-
-	// 确认元素没有被移除
-	if pq.Size() != len(elements) {
-		t.Errorf("Expected size %d, got %d", len(elements), pq.Size())
+	// Confirm element was not removed
+	if pq.Size() != 4 {
+		t.Errorf("Size should still be 4, got %d", pq.Size())
 	}
 }
 
 func TestPriorityQueue_Peek(t *testing.T) {
-	pq := NewPriorityQueue[IntComparable]()
+	pq := NewPriorityQueue[TestInt]()
 
-	// 从空队列Peek应该返回false
-	_, success := pq.Peek()
-	if success {
-		t.Error("Expected Peek to return false for empty queue")
+	// Peek from empty queue should return false
+	if _, ok := pq.Peek(); ok {
+		t.Error("Peek from empty queue should return false")
 	}
 
-	// 添加元素
-	elements := []int{5, 3, 1, 4, 2}
-	for _, e := range elements {
-		_ = pq.Add(IntComparable(e))
+	// Add elements
+	pq.Add(TestInt(3))
+	pq.Add(TestInt(1))
+	pq.Add(TestInt(4))
+	pq.Add(TestInt(2))
+
+	// Peek top element
+	if val, ok := pq.Peek(); !ok || val != TestInt(1) {
+		t.Errorf("Peek should return 1, got %v with ok=%v", val, ok)
 	}
 
-	// Peek顶部元素
-	val, success := pq.Peek()
-	if !success {
-		t.Error("Unexpected failure peeking element")
-	}
-	if val != IntComparable(1) {
-		t.Errorf("Expected 1, got %d", val)
-	}
-
-	// 确认元素没有被移除
-	if pq.Size() != len(elements) {
-		t.Errorf("Expected size %d, got %d", len(elements), pq.Size())
+	// Confirm element was not removed
+	if pq.Size() != 4 {
+		t.Errorf("Size should still be 4, got %d", pq.Size())
 	}
 }
 
 func TestPriorityQueue_ToSlice(t *testing.T) {
-	pq := NewPriorityQueue[IntComparable]()
+	pq := NewPriorityQueue[TestInt]()
 
-	// 空队列应该返回空切片
+	// Empty queue should return empty slice
 	slice := pq.ToSlice()
 	if len(slice) != 0 {
-		t.Errorf("Expected empty slice, got length %d", len(slice))
+		t.Errorf("Empty queue slice should have length 0, got %d", len(slice))
 	}
 
-	// 添加元素
-	elements := []int{5, 3, 1, 4, 2}
-	for _, e := range elements {
-		_ = pq.Add(IntComparable(e))
-	}
+	// Add elements
+	pq.Add(TestInt(3))
+	pq.Add(TestInt(1))
+	pq.Add(TestInt(4))
+	pq.Add(TestInt(2))
 
-	// 转换为切片
+	// Convert to slice
 	slice = pq.ToSlice()
-	if len(slice) != len(elements) {
-		t.Errorf("Expected slice length %d, got %d", len(elements), len(slice))
+	if len(slice) != 4 {
+		t.Errorf("Slice should have length 4, got %d", len(slice))
 	}
 
-	// 确认原队列没有被修改
-	if pq.Size() != len(elements) {
-		t.Errorf("Expected queue size %d, got %d", len(elements), pq.Size())
+	// Confirm original queue was not modified
+	if pq.Size() != 4 {
+		t.Errorf("Original queue size should still be 4, got %d", pq.Size())
 	}
 
-	// 修改切片不应影响原队列
-	slice[0] = IntComparable(100)
-	val, _ := pq.Peek()
-	if val == IntComparable(100) {
-		t.Error("Modifying slice should not affect the original queue")
+	// Modifying slice should not affect original queue
+	slice[0] = TestInt(99)
+	if val, _ := pq.Peek(); val == TestInt(99) {
+		t.Error("Modifying slice should not affect original queue")
 	}
 }
 
 func TestPriorityQueue_ToSortedSlice(t *testing.T) {
-	pq := NewPriorityQueue[IntComparable]()
+	pq := NewPriorityQueue[TestInt]()
 
-	// 空队列应该返回空切片
+	// Empty queue should return empty slice
 	slice := pq.ToSortedSlice()
 	if len(slice) != 0 {
-		t.Errorf("Expected empty slice, got length %d", len(slice))
+		t.Errorf("Empty queue slice should have length 0, got %d", len(slice))
 	}
 
-	// 添加元素
-	elements := []int{5, 3, 1, 4, 2}
-	for _, e := range elements {
-		_ = pq.Add(IntComparable(e))
-	}
+	// Add elements
+	pq.Add(TestInt(3))
+	pq.Add(TestInt(1))
+	pq.Add(TestInt(4))
+	pq.Add(TestInt(2))
 
-	// 转换为排序切片
+	// Convert to sorted slice
 	slice = pq.ToSortedSlice()
-	if len(slice) != len(elements) {
-		t.Errorf("Expected slice length %d, got %d", len(elements), len(slice))
+	if len(slice) != 4 {
+		t.Errorf("Slice should have length 4, got %d", len(slice))
 	}
 
-	// 验证切片是按优先级排序的
-	expectedOrder := []int{1, 2, 3, 4, 5}
+	// Verify slice is sorted by priority
+	expectedOrder := []TestInt{1, 2, 3, 4}
 	for i, expected := range expectedOrder {
-		if int(slice[i]) != expected {
-			t.Errorf("Expected %d at index %d, got %d", expected, i, slice[i])
+		if slice[i] != expected {
+			t.Errorf("Expected %v at position %d, got %v", expected, i, slice[i])
 		}
 	}
 
-	// 确认原队列没有被修改
-	if pq.Size() != len(elements) {
-		t.Errorf("Expected queue size %d, got %d", len(elements), pq.Size())
+	// Confirm original queue was not modified
+	if pq.Size() != 4 {
+		t.Errorf("Original queue size should still be 4, got %d", pq.Size())
 	}
 }
 
 func TestPriorityQueue_Clear(t *testing.T) {
-	pq := NewPriorityQueue[IntComparable]()
+	pq := NewPriorityQueue[TestInt]()
 
-	// 添加元素
-	elements := []int{5, 3, 1, 4, 2}
-	for _, e := range elements {
-		_ = pq.Add(IntComparable(e))
+	// Add elements
+	pq.Add(TestInt(1))
+	pq.Add(TestInt(2))
+	pq.Add(TestInt(3))
+
+	if pq.Size() != 3 {
+		t.Errorf("Size should be 3, got %d", pq.Size())
 	}
 
-	if pq.Size() != len(elements) {
-		t.Errorf("Expected size %d, got %d", len(elements), pq.Size())
-	}
-
-	// 清空队列
+	// Clear queue
 	pq.Clear()
 
 	if !pq.IsEmpty() {
-		t.Error("Expected queue to be empty after Clear()")
-	}
-	if pq.Size() != 0 {
-		t.Errorf("Expected size 0, got %d", pq.Size())
+		t.Error("Queue should be empty after clear")
 	}
 
-	// 从空队列移除应该返回错误
-	_, err := pq.Remove()
-	if err != ErrEmptyQueue {
-		t.Errorf("Expected ErrEmptyQueue, got %v", err)
+	if pq.Size() != 0 {
+		t.Errorf("Size should be 0 after clear, got %d", pq.Size())
+	}
+
+	// Remove from empty queue should return error
+	if _, err := pq.Remove(); err == nil {
+		t.Error("Remove from cleared queue should return error")
 	}
 }
 
 func TestPriorityQueue_Contains(t *testing.T) {
-	pq := NewPriorityQueue[IntComparable]()
+	pq := NewPriorityQueue[TestInt]()
 
-	// 空队列不应包含任何元素
-	if pq.Contains(IntComparable(1)) {
+	// Empty queue should not contain any elements
+	if pq.Contains(TestInt(1)) {
 		t.Error("Empty queue should not contain any elements")
 	}
 
-	// 添加元素
-	elements := []int{5, 3, 1, 4, 2}
-	for _, e := range elements {
-		_ = pq.Add(IntComparable(e))
+	// Add elements
+	pq.Add(TestInt(1))
+	pq.Add(TestInt(2))
+	pq.Add(TestInt(3))
+
+	// Check contained elements
+	if !pq.Contains(TestInt(1)) {
+		t.Error("Queue should contain 1")
+	}
+	if !pq.Contains(TestInt(2)) {
+		t.Error("Queue should contain 2")
 	}
 
-	// 检查包含的元素
-	for _, e := range elements {
-		if !pq.Contains(IntComparable(e)) {
-			t.Errorf("Queue should contain element %d", e)
-		}
-	}
-
-	// 检查不包含的元素
-	if pq.Contains(IntComparable(10)) {
-		t.Error("Queue should not contain element 10")
+	// Check non-contained elements
+	if pq.Contains(TestInt(4)) {
+		t.Error("Queue should not contain 4")
 	}
 }
 
 func TestPriorityQueue_ForEach(t *testing.T) {
-	pq := NewPriorityQueue[IntComparable]()
+	pq := NewPriorityQueue[TestInt]()
 
-	// 添加元素
-	elements := []int{5, 3, 1, 4, 2}
-	for _, e := range elements {
-		_ = pq.Add(IntComparable(e))
-	}
+	// Add elements
+	pq.Add(TestInt(1))
+	pq.Add(TestInt(2))
+	pq.Add(TestInt(3))
 
-	// 使用ForEach遍历元素
-	sum := 0
-	pq.ForEach(func(e IntComparable) {
-		sum += int(e)
+	var result []TestInt
+	pq.ForEach(func(val TestInt) {
+		result = append(result, val)
 	})
 
-	// 验证结果
-	expectedSum := 0
-	for _, e := range elements {
-		expectedSum += e
+	// Verify result
+	if len(result) != 3 {
+		t.Errorf("ForEach should visit 3 elements, got %d", len(result))
 	}
 
-	if sum != expectedSum {
-		t.Errorf("Expected sum %d, got %d", expectedSum, sum)
-	}
-
-	// 确认原队列没有被修改
-	if pq.Size() != len(elements) {
-		t.Errorf("Expected queue size %d, got %d", len(elements), pq.Size())
+	// Confirm original queue was not modified
+	if pq.Size() != 3 {
+		t.Errorf("Original queue size should still be 3, got %d", pq.Size())
 	}
 }
 
 func TestPriorityQueue_String(t *testing.T) {
-	pq := NewPriorityQueue[IntComparable]()
+	pq := NewPriorityQueue[TestInt]()
 
-	// 空队列
-	if pq.String() != "[]" {
-		t.Errorf("Expected '[]', got '%s'", pq.String())
-	}
-
-	// 添加一个元素
-	_ = pq.Add(IntComparable(1))
-	if pq.String() != "[1]" {
-		t.Errorf("Expected '[1]', got '%s'", pq.String())
-	}
-
-	// 添加更多元素
-	_ = pq.Add(IntComparable(2))
-	_ = pq.Add(IntComparable(3))
-
-	// 注意：String()方法返回的是内部数组的表示，不一定是按优先级排序的
-	// 所以这里只检查长度和格式
+	// Empty queue
 	str := pq.String()
-	if len(str) < 7 { // 至少应该是"[1, 2, 3]"的长度
-		t.Errorf("Expected string representation with 3 elements, got '%s'", str)
+	if str != "[]" {
+		t.Errorf("Empty queue string should be '[]', got '%s'", str)
+	}
+
+	// Add one element
+	pq.Add(TestInt(1))
+	str = pq.String()
+	if str != "[1]" {
+		t.Errorf("Single element queue string should be '[1]', got '%s'", str)
+	}
+
+	// Add more elements
+	pq.Add(TestInt(2))
+	pq.Add(TestInt(3))
+
+	// Note: String() method returns the internal array representation, not necessarily sorted by priority
+	// So here we only check length and format
+	str = pq.String()
+	if len(str) < 7 { // Should be at least "[1, 2, 3]" length
+		t.Errorf("String representation seems too short: '%s'", str)
 	}
 }

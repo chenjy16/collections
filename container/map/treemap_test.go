@@ -1,7 +1,7 @@
 package maps
 
 import (
-	"strconv"
+	"fmt"
 	"testing"
 )
 
@@ -18,8 +18,8 @@ func TestTreeMapNew(t *testing.T) {
 	}
 }
 
-func TestTreeMapNewWithComparator(t *testing.T) {
-	// 自定义比较器：降序
+func TestTreeMapWithComparator(t *testing.T) {
+	// Custom comparator: descending order
 	comparator := func(a, b int) int {
 		if a > b {
 			return -1
@@ -29,434 +29,447 @@ func TestTreeMapNewWithComparator(t *testing.T) {
 		return 0
 	}
 
-	m := NewTreeMapWithComparator[int, string](comparator)
-	if m == nil {
-		t.Error("NewTreeMapWithComparator should not return nil")
+	tm := NewTreeMapWithComparator[int, string](comparator)
+
+	tm.Put(1, "one")
+	tm.Put(3, "three")
+	tm.Put(2, "two")
+
+	// Test if custom comparator is effective
+	keys := tm.Keys()
+	if len(keys) != 3 {
+		t.Errorf("Expected 3 keys, got %d", len(keys))
 	}
 
-	// 测试自定义比较器是否生效
-	m.Put(1, "one")
-	m.Put(2, "two")
-	m.Put(3, "three")
-
-	keys := m.Keys()
-	expected := []int{3, 2, 1} // 降序
+	expected := []int{3, 2, 1} // Descending order
 	for i, key := range keys {
 		if key != expected[i] {
-			t.Errorf("Expected key %d at index %d, got %d", expected[i], i, key)
+			t.Errorf("Expected key %d at position %d, got %d", expected[i], i, key)
 		}
 	}
 }
 
-func TestTreeMapPutAndGet(t *testing.T) {
-	m := NewTreeMap[int, string]()
+func TestTreeMapPut(t *testing.T) {
+	tm := NewTreeMap[int, string]()
 
-	// 测试插入新键
-	oldValue, existed := m.Put(1, "one")
+	// Test inserting new key
+	oldVal, existed := tm.Put(1, "one")
 	if existed {
-		t.Error("Put should return false for new key")
+		t.Error("Key should not exist initially")
 	}
-	if oldValue != "" {
-		t.Error("Put should return zero value for new key")
-	}
-
-	// 测试获取值
-	value, found := m.Get(1)
-	if !found {
-		t.Error("Get should find existing key")
-	}
-	if value != "one" {
-		t.Errorf("Expected 'one', got '%s'", value)
+	if oldVal != "" {
+		t.Error("Old value should be empty for new key")
 	}
 
-	// 测试更新现有键
-	oldValue, existed = m.Put(1, "ONE")
+	// Test getting value
+	val, ok := tm.Get(1)
+	if !ok {
+		t.Error("Key should exist after Put")
+	}
+	if val != "one" {
+		t.Errorf("Expected 'one', got '%s'", val)
+	}
+
+	// Test updating existing key
+	oldVal, existed = tm.Put(1, "ONE")
 	if !existed {
-		t.Error("Put should return true for existing key")
+		t.Error("Key should exist")
 	}
-	if oldValue != "one" {
-		t.Errorf("Expected old value 'one', got '%s'", oldValue)
+	if oldVal != "one" {
+		t.Errorf("Expected old value 'one', got '%s'", oldVal)
 	}
 
-	// 验证值已更新
-	value, found = m.Get(1)
-	if !found {
-		t.Error("Get should find existing key")
-	}
-	if value != "ONE" {
-		t.Errorf("Expected 'ONE', got '%s'", value)
+	// Verify value is updated
+	val, ok = tm.Get(1)
+	if !ok || val != "ONE" {
+		t.Error("Failed to update existing key")
 	}
 }
 
-func TestTreeMapContainsKey(t *testing.T) {
-	m := NewTreeMap[int, string]()
+func TestTreeMapGet(t *testing.T) {
+	tm := NewTreeMap[int, string]()
 
-	// 测试空映射
-	if m.ContainsKey(1) {
+	// Test empty map
+	_, ok := tm.Get(1)
+	if ok {
 		t.Error("Empty map should not contain any key")
 	}
 
-	// 添加元素
-	m.Put(1, "one")
-	m.Put(2, "two")
+	// Add elements
+	tm.Put(1, "one")
+	tm.Put(2, "two")
 
-	// 测试存在的键
-	if !m.ContainsKey(1) {
-		t.Error("Map should contain key 1")
+	// Test existing key
+	val, ok := tm.Get(1)
+	if !ok {
+		t.Error("Key should exist")
 	}
-	if !m.ContainsKey(2) {
-		t.Error("Map should contain key 2")
+	if val != "one" {
+		t.Errorf("Expected 'one', got '%s'", val)
 	}
 
-	// 测试不存在的键
-	if m.ContainsKey(3) {
-		t.Error("Map should not contain key 3")
+	// Test non-existing key
+	_, ok = tm.Get(3)
+	if ok {
+		t.Error("Non-existing key should not be found")
 	}
 }
 
 func TestTreeMapRemove(t *testing.T) {
-	m := NewTreeMap[int, string]()
+	tm := NewTreeMap[int, string]()
 
-	// 测试移除不存在的键
-	value, removed := m.Remove(1)
-	if removed {
-		t.Error("Remove should return false for non-existing key")
-	}
-	if value != "" {
-		t.Error("Remove should return zero value for non-existing key")
+	// Test removing non-existing key
+	_, existed := tm.Remove(1)
+	if existed {
+		t.Error("Non-existing key should not be found")
 	}
 
-	// 添加元素
-	m.Put(1, "one")
-	m.Put(2, "two")
-	m.Put(3, "three")
+	// Add elements
+	tm.Put(1, "one")
+	tm.Put(2, "two")
+	tm.Put(3, "three")
 
-	// 测试移除存在的键
-	value, removed = m.Remove(2)
-	if !removed {
-		t.Error("Remove should return true for existing key")
+	// Test removing existing key
+	oldVal, existed := tm.Remove(2)
+	if !existed {
+		t.Error("Key should exist")
 	}
-	if value != "two" {
-		t.Errorf("Expected 'two', got '%s'", value)
-	}
-
-	// 验证键已被移除
-	if m.ContainsKey(2) {
-		t.Error("Key 2 should be removed")
-	}
-	if m.Size() != 2 {
-		t.Errorf("Expected size 2, got %d", m.Size())
+	if oldVal != "two" {
+		t.Errorf("Expected old value 'two', got '%s'", oldVal)
 	}
 
-	// 验证其他键仍然存在
-	if !m.ContainsKey(1) {
-		t.Error("Key 1 should still exist")
+	// Verify key is removed
+	_, ok := tm.Get(2)
+	if ok {
+		t.Error("Key should not exist after removal")
 	}
-	if !m.ContainsKey(3) {
-		t.Error("Key 3 should still exist")
+
+	// Verify other keys still exist
+	val, ok := tm.Get(1)
+	if !ok || val != "one" {
+		t.Error("Other keys should remain")
+	}
+	val, ok = tm.Get(3)
+	if !ok || val != "three" {
+		t.Error("Other keys should remain")
+	}
+}
+
+func TestTreeMapContainsKey(t *testing.T) {
+	tm := NewTreeMap[int, string]()
+
+	// Test empty map
+	if tm.ContainsKey(1) {
+		t.Error("Empty map should not contain any key")
+	}
+
+	// Add elements
+	tm.Put(1, "one")
+	tm.Put(2, "two")
+
+	// Test existing key
+	if !tm.ContainsKey(1) {
+		t.Error("Map should contain key 1")
+	}
+	if !tm.ContainsKey(2) {
+		t.Error("Map should contain key 2")
+	}
+
+	// Test non-existing key
+	if tm.ContainsKey(3) {
+		t.Error("Map should not contain key 3")
 	}
 }
 
 func TestTreeMapSize(t *testing.T) {
-	m := NewTreeMap[int, string]()
+	tm := NewTreeMap[int, string]()
 
-	// 测试空映射
-	if m.Size() != 0 {
-		t.Errorf("Expected size 0, got %d", m.Size())
+	// Test empty map
+	if tm.Size() != 0 {
+		t.Error("Empty map size should be 0")
 	}
 
-	// 添加元素
-	for i := 1; i <= 5; i++ {
-		m.Put(i, strconv.Itoa(i))
-		if m.Size() != i {
-			t.Errorf("Expected size %d, got %d", i, m.Size())
-		}
+	// Add elements
+	tm.Put(1, "one")
+	tm.Put(2, "two")
+	tm.Put(3, "three")
+
+	if tm.Size() != 3 {
+		t.Errorf("Expected size 3, got %d", tm.Size())
 	}
 
-	// 移除元素
-	for i := 5; i >= 1; i-- {
-		m.Remove(i)
-		if m.Size() != i-1 {
-			t.Errorf("Expected size %d, got %d", i-1, m.Size())
-		}
+	// Remove elements
+	tm.Remove(2)
+	if tm.Size() != 2 {
+		t.Errorf("Expected size 2 after removal, got %d", tm.Size())
 	}
 }
 
 func TestTreeMapIsEmpty(t *testing.T) {
-	m := NewTreeMap[int, string]()
+	tm := NewTreeMap[int, string]()
 
-	// 测试空映射
-	if !m.IsEmpty() {
+	// Test empty map
+	if !tm.IsEmpty() {
 		t.Error("New map should be empty")
 	}
 
-	// 添加元素
-	m.Put(1, "one")
-	if m.IsEmpty() {
-		t.Error("Map with elements should not be empty")
+	// Add elements
+	tm.Put(1, "one")
+	if tm.IsEmpty() {
+		t.Error("Map should not be empty after adding element")
 	}
 
-	// 移除元素
-	m.Remove(1)
-	if !m.IsEmpty() {
+	// Remove elements
+	tm.Remove(1)
+	if !tm.IsEmpty() {
 		t.Error("Map should be empty after removing all elements")
 	}
 }
 
 func TestTreeMapClear(t *testing.T) {
-	m := NewTreeMap[int, string]()
+	tm := NewTreeMap[int, string]()
 
-	// 添加元素
-	for i := 1; i <= 10; i++ {
-		m.Put(i, strconv.Itoa(i))
-	}
+	// Add elements
+	tm.Put(1, "one")
+	tm.Put(2, "two")
+	tm.Put(3, "three")
 
-	if m.Size() != 10 {
-		t.Errorf("Expected size 10, got %d", m.Size())
-	}
+	// Clear map
+	tm.Clear()
 
-	// 清空映射
-	m.Clear()
-
-	if !m.IsEmpty() {
+	if !tm.IsEmpty() {
 		t.Error("Map should be empty after Clear")
 	}
-	if m.Size() != 0 {
-		t.Errorf("Expected size 0 after Clear, got %d", m.Size())
+	if tm.Size() != 0 {
+		t.Error("Map size should be 0 after Clear")
 	}
 
-	// 验证所有键都被移除
-	for i := 1; i <= 10; i++ {
-		if m.ContainsKey(i) {
-			t.Errorf("Key %d should not exist after Clear", i)
-		}
+	// Verify all keys are removed
+	if tm.ContainsKey(1) || tm.ContainsKey(2) || tm.ContainsKey(3) {
+		t.Error("Map should not contain any key after Clear")
 	}
 }
 
 func TestTreeMapKeys(t *testing.T) {
-	m := NewTreeMap[int, string]()
+	tm := NewTreeMap[int, string]()
 
-	// 测试空映射
-	keys := m.Keys()
+	// Test empty map
+	keys := tm.Keys()
 	if len(keys) != 0 {
-		t.Errorf("Expected 0 keys, got %d", len(keys))
+		t.Error("Empty map should have no keys")
 	}
 
-	// 添加元素（无序插入）
-	testData := []int{5, 2, 8, 1, 9, 3, 7, 4, 6}
-	for _, key := range testData {
-		m.Put(key, strconv.Itoa(key))
+	// Add elements (unordered insertion)
+	tm.Put(3, "three")
+	tm.Put(1, "one")
+	tm.Put(4, "four")
+	tm.Put(2, "two")
+
+	// Verify key count
+	keys = tm.Keys()
+	if len(keys) != 4 {
+		t.Errorf("Expected 4 keys, got %d", len(keys))
 	}
 
-	keys = m.Keys()
-
-	// 验证键的数量
-	if len(keys) != len(testData) {
-		t.Errorf("Expected %d keys, got %d", len(testData), len(keys))
-	}
-
-	// 验证键是有序的
-	for i := 0; i < len(keys); i++ {
-		if keys[i] != i+1 {
-			t.Errorf("Expected key %d at index %d, got %d", i+1, i, keys[i])
+	// Verify keys are ordered
+	expected := []int{1, 2, 3, 4}
+	for i, key := range keys {
+		if key != expected[i] {
+			t.Errorf("Expected key %d at position %d, got %d", expected[i], i, key)
 		}
 	}
 }
 
 func TestTreeMapValues(t *testing.T) {
-	m := NewTreeMap[int, string]()
+	tm := NewTreeMap[int, string]()
 
-	// 测试空映射
-	values := m.Values()
+	// Test empty map
+	values := tm.Values()
 	if len(values) != 0 {
-		t.Errorf("Expected 0 values, got %d", len(values))
+		t.Error("Empty map should have no values")
 	}
 
-	// 添加元素
-	testData := map[int]string{3: "three", 1: "one", 2: "two"}
-	for key, value := range testData {
-		m.Put(key, value)
+	// Add elements
+	tm.Put(3, "three")
+	tm.Put(1, "one")
+	tm.Put(2, "two")
+
+	// Verify value count
+	values = tm.Values()
+	if len(values) != 3 {
+		t.Errorf("Expected 3 values, got %d", len(values))
 	}
 
-	values = m.Values()
-
-	// 验证值的数量
-	if len(values) != len(testData) {
-		t.Errorf("Expected %d values, got %d", len(testData), len(values))
-	}
-
-	// 验证值的顺序（应该按键的顺序）
+	// Verify value order (should be by key order)
 	expected := []string{"one", "two", "three"}
 	for i, value := range values {
 		if value != expected[i] {
-			t.Errorf("Expected value '%s' at index %d, got '%s'", expected[i], i, value)
+			t.Errorf("Expected value '%s' at position %d, got '%s'", expected[i], i, value)
 		}
 	}
 }
 
 func TestTreeMapEntries(t *testing.T) {
-	m := NewTreeMap[int, string]()
+	tm := NewTreeMap[int, string]()
 
-	// 测试空映射
-	entries := m.Entries()
+	// Test empty map
+	entries := tm.Entries()
 	if len(entries) != 0 {
-		t.Errorf("Expected 0 entries, got %d", len(entries))
+		t.Error("Empty map should have no entries")
 	}
 
-	// 添加元素
-	testData := map[int]string{3: "three", 1: "one", 2: "two"}
-	for key, value := range testData {
-		m.Put(key, value)
+	// Add elements
+	tm.Put(3, "three")
+	tm.Put(1, "one")
+	tm.Put(2, "two")
+
+	// Verify entry count
+	entries = tm.Entries()
+	if len(entries) != 3 {
+		t.Errorf("Expected 3 entries, got %d", len(entries))
 	}
 
-	entries = m.Entries()
-
-	// 验证条目的数量
-	if len(entries) != len(testData) {
-		t.Errorf("Expected %d entries, got %d", len(testData), len(entries))
-	}
-
-	// 验证条目的顺序（应该按键的顺序）
+	// Verify entry order (should be by key order)
 	expectedKeys := []int{1, 2, 3}
 	expectedValues := []string{"one", "two", "three"}
-
 	for i, entry := range entries {
 		if entry.Key != expectedKeys[i] {
-			t.Errorf("Expected key %d at index %d, got %d", expectedKeys[i], i, entry.Key)
+			t.Errorf("Expected key %d at position %d, got %d", expectedKeys[i], i, entry.Key)
 		}
 		if entry.Value != expectedValues[i] {
-			t.Errorf("Expected value '%s' at index %d, got '%s'", expectedValues[i], i, entry.Value)
+			t.Errorf("Expected value '%s' at position %d, got '%s'", expectedValues[i], i, entry.Value)
 		}
 	}
 }
 
 func TestTreeMapForEach(t *testing.T) {
-	m := NewTreeMap[int, string]()
+	tm := NewTreeMap[int, string]()
 
-	// 添加元素
-	testData := map[int]string{3: "three", 1: "one", 2: "two"}
-	for key, value := range testData {
-		m.Put(key, value)
-	}
+	// Add elements
+	tm.Put(3, "three")
+	tm.Put(1, "one")
+	tm.Put(2, "two")
 
-	// 测试ForEach
+	// Test ForEach
 	var keys []int
 	var values []string
-
-	m.ForEach(func(key int, value string) {
-		keys = append(keys, key)
-		values = append(values, value)
+	tm.ForEach(func(k int, v string) {
+		keys = append(keys, k)
+		values = append(values, v)
 	})
 
-	// 验证顺序
+	// Verify order
 	expectedKeys := []int{1, 2, 3}
 	expectedValues := []string{"one", "two", "three"}
 
+	if len(keys) != len(expectedKeys) {
+		t.Errorf("Expected %d keys, got %d", len(expectedKeys), len(keys))
+	}
+
 	for i := range keys {
 		if keys[i] != expectedKeys[i] {
-			t.Errorf("Expected key %d at index %d, got %d", expectedKeys[i], i, keys[i])
+			t.Errorf("Expected key %d at position %d, got %d", expectedKeys[i], i, keys[i])
 		}
 		if values[i] != expectedValues[i] {
-			t.Errorf("Expected value '%s' at index %d, got '%s'", expectedValues[i], i, values[i])
+			t.Errorf("Expected value '%s' at position %d, got '%s'", expectedValues[i], i, values[i])
 		}
 	}
 }
 
 func TestTreeMapString(t *testing.T) {
-	m := NewTreeMap[int, string]()
+	tm := NewTreeMap[int, string]()
 
-	// 测试空映射
-	str := m.String()
+	// Test empty map
+	str := tm.String()
 	if str != "{}" {
 		t.Errorf("Expected '{}', got '%s'", str)
 	}
 
-	// 添加一个元素
-	m.Put(1, "one")
-	str = m.String()
-	expected := "{1=one}"
-	if str != expected {
-		t.Errorf("Expected '%s', got '%s'", expected, str)
+	// Test single element
+	tm.Put(1, "one")
+	str = tm.String()
+	if str != "{1=one}" {
+		t.Errorf("Expected '{1=one}', got '%s'", str)
 	}
 
-	// 添加多个元素
-	m.Put(2, "two")
-	m.Put(3, "three")
-	str = m.String()
-	expected = "{1=one, 2=two, 3=three}"
+	// Test multiple elements
+	tm.Put(2, "two")
+	tm.Put(3, "three")
+	str = tm.String()
+	expected := "{1=one, 2=two, 3=three}"
 	if str != expected {
 		t.Errorf("Expected '%s', got '%s'", expected, str)
 	}
 }
 
-func TestTreeMapLargeDataSet(t *testing.T) {
-	m := NewTreeMap[int, int]()
+func TestTreeMapLargeDataset(t *testing.T) {
+	tm := NewTreeMap[int, string]()
 
-	// 插入大量数据
-	n := 1000
-	for i := 0; i < n; i++ {
-		m.Put(i, i*2)
+	// Insert large amount of data
+	for i := 1000; i >= 1; i-- {
+		tm.Put(i, fmt.Sprintf("value%d", i))
 	}
 
-	// 验证大小
-	if m.Size() != n {
-		t.Errorf("Expected size %d, got %d", n, m.Size())
+	// Verify size
+	if tm.Size() != 1000 {
+		t.Errorf("Expected size 1000, got %d", tm.Size())
 	}
 
-	// 验证所有数据
-	for i := 0; i < n; i++ {
-		value, found := m.Get(i)
-		if !found {
+	// Verify all data
+	for i := 1; i <= 1000; i++ {
+		val, ok := tm.Get(i)
+		if !ok {
 			t.Errorf("Key %d should exist", i)
 		}
-		if value != i*2 {
-			t.Errorf("Expected value %d for key %d, got %d", i*2, i, value)
+		expected := fmt.Sprintf("value%d", i)
+		if val != expected {
+			t.Errorf("Expected value '%s' for key %d, got '%s'", expected, i, val)
 		}
 	}
 
-	// 验证键的顺序
-	keys := m.Keys()
+	// Verify key order
+	keys := tm.Keys()
 	for i, key := range keys {
-		if key != i {
-			t.Errorf("Expected key %d at index %d, got %d", i, i, key)
+		if key != i+1 {
+			t.Errorf("Expected key %d at position %d, got %d", i+1, i, key)
 		}
 	}
 }
 
-// 基准测试
+// Benchmark tests
 func BenchmarkTreeMapPut(b *testing.B) {
-	m := NewTreeMap[int, int]()
-	b.ResetTimer()
+	tm := NewTreeMap[int, string]()
 
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		m.Put(i, i)
+		tm.Put(i, fmt.Sprintf("value%d", i))
 	}
 }
 
 func BenchmarkTreeMapGet(b *testing.B) {
-	m := NewTreeMap[int, int]()
+	tm := NewTreeMap[int, string]()
 
-	// 预填充数据
+	// Pre-populate data
 	for i := 0; i < 1000; i++ {
-		m.Put(i, i)
+		tm.Put(i, fmt.Sprintf("value%d", i))
 	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		m.Get(i % 1000)
+		tm.Get(i % 1000)
 	}
 }
 
 func BenchmarkTreeMapRemove(b *testing.B) {
-	m := NewTreeMap[int, int]()
+	tm := NewTreeMap[int, string]()
 
-	// 预填充数据
+	// Pre-populate data
 	for i := 0; i < b.N; i++ {
-		m.Put(i, i)
+		tm.Put(i, fmt.Sprintf("value%d", i))
 	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		m.Remove(i)
+		tm.Remove(i)
 	}
 }

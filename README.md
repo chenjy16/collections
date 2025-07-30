@@ -1,64 +1,33 @@
-# Collections - Go Collection Library | Go 集合库
+# Collections
 
-[English](#english) | [中文](#chinese)
+Collections is a Go-based collection library that provides common collection types and utilities found in Java SDK but missing from Go's standard library. This library follows Go language conventions and idioms, providing rich collection operation functionality for Go developers.
 
----
+## Features
 
-## English
+- 🚀 Rich collection types: List, Set, Map, Queue, Stack, etc.
+- 🔧 Generic support (based on Go 1.18+)
+- ⚡ High-performance implementations
+- 🎯 Go-idiomatic API design
+- 🧪 Complete documentation and testing
+- 🔒 Thread-safe implementations available
+- 📊 Mathematical set operations support (union, intersection, difference)
+- 🔄 Iterator pattern support
 
-Collections is a Go-based collection library that provides common collection types and tools found in Java SDK but missing from Go's standard library. This library follows Go language conventions and idioms, providing rich collection operation functionality for Go developers.
+## Project Statistics
 
-### Features
+- **Total Go files**: 28
+- **Source code lines**: 4,731 lines (excluding tests)
+- **Test code lines**: 3,915 lines
+- **Test files**: 9
+- **Average test coverage**: 70%+ (some modules reach 100%)
 
-- Rich collection types: List, Set, Map, Queue, Stack, etc.
-- Generic support (based on Go 1.18+)
-- High-performance implementation
-- Go-idiomatic API design
-- Comprehensive documentation and testing
-- Thread-safe implementations available
-- Mathematical set operations (union, intersection, difference)
-- Iterator pattern support
-
-### Project Statistics
-
-- **Total Go Files**: 28
-- **Source Code Lines**: 4,731 (excluding tests)
-- **Test Code Lines**: 3,915
-- **Test Files**: 9
-- **Average Test Coverage**: 70%+ (some modules reach 100%)
-
----
-
-## Chinese
-
-Collections 是一个基于Go语言的集合库，提供了Java SDK中常见但Go标准库中缺少的集合类型和工具。该库遵循Go语言的代码规范和惯例，为Go开发者提供丰富的集合操作功能。
-
-### 特性
-
-- 提供丰富的集合类型：List、Set、Map、Queue、Stack等
-- 支持泛型（基于Go 1.18+）
-- 高性能实现
-- 符合Go语言习惯的API设计
-- 完整的文档和测试
-- 提供线程安全的实现
-- 支持数学集合运算（并集、交集、差集）
-- 迭代器模式支持
-
-### 项目统计
-
-- **Go文件总数**: 28个
-- **源代码行数**: 4,731行（不含测试）
-- **测试代码行数**: 3,915行
-- **测试文件数**: 9个
-- **平均测试覆盖率**: 70%+（部分模块达到100%）
-
-### Installation
+## Installation
 
 ```bash
 go get github.com/chenjianyu/collections
 ```
 
-### Usage Examples
+## Quick Start
 
 ```go
 package main
@@ -71,359 +40,329 @@ import (
 )
 
 func main() {
-	// 创建ArrayList
+	// ArrayList example
 	list := list.New[int]()
-	list.Add(1)
-	list.Add(2)
-	list.Add(3)
-
+	list.Add(1, 2, 3)
 	fmt.Println("List size:", list.Size())
-	fmt.Println("List contains 2:", list.Contains(2))
 
-	// 创建HashSet
+	// HashSet example
 	set := set.New[string]()
-	set.Add("apple")
-	set.Add("banana")
-	set.Add("apple") // 重复元素不会被添加
-
+	set.Add("apple", "banana")
 	fmt.Println("Set size:", set.Size())
-	fmt.Println("Set elements:")
-	set.ForEach(func(item string) {
-		fmt.Println(item)
-	})
 
-	// 创建HashMap
-	hashMap := maps.NewLinkedHashMap[string, int]()
+	// HashMap example
+	hashMap := maps.NewHashMap[string, int]()
 	hashMap.Put("one", 1)
 	hashMap.Put("two", 2)
-
-	fmt.Println("Map size:", hashMap.Size())
 	if val, ok := hashMap.Get("one"); ok {
 		fmt.Println("Value for 'one':", val)
 	}
 
-	// 创建ConcurrentSkipListSet（线程安全的有序集合）
+	// ConcurrentSkipListSet example (thread-safe ordered set)
 	skipSet := set.NewConcurrentSkipListSet[int]()
-	skipSet.Add(5)
-	skipSet.Add(2)
-	skipSet.Add(8)
-	skipSet.Add(1)
-
-	fmt.Println("SkipSet (sorted):", skipSet) // 输出: [1, 2, 5, 8]
-	if first, ok := skipSet.First(); ok {
-		fmt.Println("First element:", first) // 输出: 1
-	}
-	if last, ok := skipSet.Last(); ok {
-		fmt.Println("Last element:", last) // 输出: 8
-	}
-
-	// 创建TreeMap（有序映射）
-	treeMap := maps.NewTreeMap[string, int]()
-	treeMap.Put("one", 1)
-	treeMap.Put("two", 2)
-	treeMap.Put("three", 3)
-
-	fmt.Println("TreeMap size:", treeMap.Size())
-	if val, ok := treeMap.Get("two"); ok {
-		fmt.Println("Value for 'two':", val)
-	}
-	
-	// 创建LinkedHashMap（类似Java的HashMap，链表长度超过阈值时转换为红黑树）
-	lhMap := maps.NewLinkedHashMap[string, int]()
-	lhMap.Put("one", 1)
-	lhMap.Put("two", 2)
-	lhMap.Put("three", 3)
-
-	fmt.Println("LinkedHashMap size:", lhMap.Size())
-	if val, ok := lhMap.Get("one"); ok {
-		fmt.Println("Value for 'one':", val)
-	}
-	
-	// 创建一个小容量的LinkedHashMap，以便更容易触发冲突和树化
-	collisionMap := maps.NewLinkedHashMapWithCapacity[int, string](4)
-	// 添加足够多的元素以触发冲突和树化
-	for i := 0; i < 20; i++ {
-		collisionMap.Put(i, fmt.Sprintf("value%d", i))
-	}
+	skipSet.Add(5, 2, 8, 1)
+	fmt.Println("SkipSet (sorted):", skipSet) // Output: [1, 2, 5, 8]
 }
 ```
 
-### Supported Collection Types
+## Supported Collection Types
 
-- **List**
-  - ArrayList: Dynamic array-based List implementation
-  - LinkedList: Doubly linked list-based List implementation
+### 📋 List
+- **ArrayList**: List implementation based on dynamic arrays
+- **LinkedList**: List implementation based on doubly linked lists
 
-- **Set**
-  - HashSet: Hash table-based Set implementation
-  - TreeSet: Red-black tree-based ordered Set implementation
-  - ConcurrentSkipListSet: Skip list-based thread-safe ordered Set implementation
+### 🔗 Set
+- **HashSet**: Set implementation based on hash tables
+- **TreeSet**: Ordered Set implementation based on red-black trees
+- **ConcurrentSkipListSet**: Thread-safe ordered Set implementation based on skip lists
 
-- **Map**
-  - HashMap: Hash table-based Map implementation
-  - TreeMap: Red-black tree-based ordered Map implementation
-  - RedisHashMap: Redis hash table design-based Map implementation with progressive resizing and chaining for collision resolution
-  - LinkedHashMap: Chaining and red-black tree-based Map implementation, similar to Java's HashMap, converts chains to trees when threshold is exceeded
+### 🗺️ Map
+- **HashMap**: Map implementation based on hash tables
+- **TreeMap**: Ordered Map implementation based on red-black trees
+- **LinkedHashMap**: Map implementation based on chaining and red-black trees, similar to Java's HashMap
+- **ConcurrentHashMap**: Thread-safe hash table implementation
 
-- **Queue**
-  - LinkedQueue: Linked list-based Queue implementation
-  - PriorityQueue: Priority queue implementation
+`ConcurrentHashMap` is a thread-safe hash table implementation that borrows design ideas from Java's `ConcurrentHashMap`, using segment locking technology to achieve high concurrent performance.
 
-- **Stack**
-  - ArrayStack: Array-based Stack implementation
-  - LinkedStack: Linked list-based Stack implementation
+## Core Features
 
-- **Others**
-  - Pair: Key-value pair
-  - MultiMap: Map with multiple values per key
-  - BiMap: Bidirectional Map
+### 1. Thread Safety
+- Uses segment locking technology, dividing the hash table into multiple segments
+- Each segment locks independently, reducing lock contention
+- Supports high concurrent read and write operations
 
-### Architecture Design
+### 2. Segment Lock Design
+- Default 16 segments, adjustable through capacity parameters
+- Read operations are lock-free, write operations only lock relevant segments
+- Operations on different segments can execute in parallel
 
-The project follows a well-structured architecture with clear separation of concerns:
+### 3. Dynamic Resizing
+- Supports automatic resizing when load factor exceeds threshold
+- Maintains thread safety during resizing process
+- Progressive resizing to reduce performance impact
 
-#### Core Interfaces
-- **Container**: Basic container interface with `Size()`, `IsEmpty()`, `Clear()`, `Contains()`, `String()` methods
+### 4. Rich API
+- Implements complete `Map` interface
+- Provides atomic operations: `PutIfAbsent`, `Replace`, `ReplaceIf`
+- Supports compute operations: `ComputeIfAbsent`, `ComputeIfPresent`
+- Provides batch operations and conversion functionality
+
+## Use Cases
+
+### High Concurrent Read/Write
+- Cache systems in multi-threaded environments
+- Concurrent data processing
+- Real-time data statistics
+
+### Read-Heavy Scenarios
+- Configuration management systems
+- Metadata storage
+- Lookup tables and indexes
+
+### Atomic Operation Requirements
+- Counters and statistics
+- State management
+- Conditional updates
+
+## Performance Characteristics
+
+### Concurrent Performance
+- **Read operations**: Lock-free, supports high concurrency
+- **Write operations**: Segment locking, reduces contention
+- **Mixed operations**: Read and write can execute in parallel
+
+### Benchmark Results
+```
+BenchmarkConcurrentHashMapGet-10     14684961    79.86 ns/op    159 B/op    10 allocs/op
+BenchmarkConcurrentHashMapPut-10     11166087   122.4 ns/op     90 B/op     5 allocs/op
+BenchmarkConcurrentHashMapMixed-10    9794205   120.7 ns/op    174 B/op    11 allocs/op
+```
+
+### Performance Advantages
+- Excellent read operation performance (~80ns)
+- Reasonable write operation overhead (~120ns)
+- Stable mixed operation performance
+
+## Basic Usage
+
+### Creating Instances
+```go
+// Using default capacity
+chm := maps.NewConcurrentHashMap[string, int]()
+
+// Specifying initial capacity
+chm := maps.NewConcurrentHashMapWithCapacity[string, int](100)
+
+// Creating from existing map
+sourceMap := map[string]int{"key1": 1, "key2": 2}
+chm := maps.ConcurrentHashMapFromMap(sourceMap)
+```
+
+### Basic Operations
+```go
+// Add/update elements
+oldValue, existed := chm.Put("key1", 100)
+
+// Get elements
+value, exists := chm.Get("key1")
+
+// Remove elements
+oldValue, removed := chm.Remove("key1")
+
+// Check containment
+hasKey := chm.ContainsKey("key1")
+hasValue := chm.ContainsValue(100)
+
+// Get size
+size := chm.Size()
+isEmpty := chm.IsEmpty()
+
+// Clear
+chm.Clear()
+```
+
+## API Methods
+
+### Basic Operations
+- `Put(key K, value V) (V, bool)` - Add or update key-value pair
+- `Get(key K) (V, bool)` - Get value for specified key
+- `Remove(key K) (V, bool)` - Remove specified key
+- `ContainsKey(key K) bool` - Check if contains specified key
+- `ContainsValue(value V) bool` - Check if contains specified value
+- `Size() int` - Get number of elements
+- `IsEmpty() bool` - Check if empty
+- `Clear()` - Clear all elements
+
+### Advanced Operations
+- `PutIfAbsent(key K, value V) (V, bool)` - Add only if key doesn't exist
+- `Replace(key K, value V) (V, bool)` - Replace only existing keys
+- `ReplaceIf(key K, oldValue V, newValue V) bool` - Conditional replacement
+
+### Compute Operations
+- `ComputeIfAbsent(key K, mappingFunction func(K) V) V` - Compute missing values
+- `ComputeIfPresent(key K, remappingFunction func(K, V) V) (V, bool)` - Recompute existing values
+
+### Batch Operations
+- `PutAll(other Map[K, V])` - Batch add all elements from another Map
+- `PutAllFromMap(m map[K]V)` - Batch add all elements from Go native map
+
+### Conversion and Traversal
+- `Keys() []K` - Get all keys
+- `Values() []V` - Get all values
+- `ToMap() map[K]V` - Convert to Go native map
+- `Snapshot() map[K]V` - Get snapshot of current state
+- `ForEach(fn func(K, V))` - Traverse all elements
+
+### Container Operations
+- `String() string` - String representation
+
+## Concurrency Safety Mechanism
+
+### Segment Lock Architecture
+```go
+type ConcurrentHashMap[K comparable, V any] struct {
+    segments []*segment[K, V]  // Segment array
+    segmentMask int            // Segment mask
+    segmentShift int           // Segment shift
+}
+
+type segment[K comparable, V any] struct {
+    mu      sync.RWMutex       // Read-write lock
+    buckets []*bucket[K, V]    // Bucket array
+    size    int                // Segment size
+    threshold int              // Resize threshold
+}
+```
+
+### Locking Strategy
+- **Read operations**: Use read locks, support concurrent reading
+- **Write operations**: Use write locks, ensure data consistency
+- **Segment isolation**: Operations on different segments don't interfere
+
+### Hash Distribution
+- Uses high-quality hash functions to ensure uniform distribution
+- Fast segment and bucket location through bit operations
+- Supports dynamic resizing and rehashing
+
+## Memory Usage
+
+### Memory Structure
+- Segmented storage reduces memory fragmentation
+- Chaining for conflict resolution saves space
+- Lazy allocation, resize on demand
+
+### Memory Optimization
+- Reasonable load factor (0.75)
+- Progressive resizing strategy
+- Timely cleanup of unused nodes
+
+## Notes
+
+### Usage Recommendations
+1. **Capacity Planning**: Set reasonable initial capacity based on expected data volume
+2. **Concurrency Control**: Although thread-safe, compound operations still need additional synchronization
+3. **Performance Monitoring**: Monitor performance metrics in high concurrency scenarios
+4. **Memory Management**: Regularly clean up unnecessary data
+
+### Limitations
+1. **Iteration Consistency**: Modifications during traversal may not be immediately reflected
+2. **Memory Overhead**: Additional lock and segment overhead compared to regular maps
+3. **Complexity**: Complex implementation, relatively difficult to debug
+
+### Best Practices
+1. Prioritize use in high concurrency scenarios
+2. Set reasonable initial capacity to avoid frequent resizing
+3. Use atomic operations instead of compound operations
+4. Regularly monitor performance and memory usage
+
+## Complete Examples
+
+For complete usage examples, please refer to the `ConcurrentHashMapExample()` function in `examples/container_examples.go`.
+
+## Technical Implementation
+
+### Core Algorithms
+- **Hash Algorithm**: Uses high-quality hash functions to ensure uniform distribution
+- **Segmentation Strategy**: Segment allocation based on high bits of hash value
+- **Conflict Resolution**: Uses chaining to handle hash conflicts
+- **Resize Algorithm**: Progressive resizing maintains stable performance
+
+### Performance Optimization
+- **Lock-free Reading**: Read operations don't require locks
+- **Fine-grained Locking**: Write operations only lock relevant segments
+- **Memory Locality**: Optimized data structure layout
+- **Batch Operations**: Reduce lock acquisition frequency
+
+### Generic Support
+- Full Go generics support
+- Type-safe key-value operations
+- Compile-time type checking
+- Zero runtime type conversion overhead
+
+### 📤 Queue
+- **LinkedQueue**: Queue implementation based on linked lists
+- **PriorityQueue**: Priority queue implementation
+
+### 📚 Stack
+- **ArrayStack**: Stack implementation based on arrays
+- **LinkedStack**: Stack implementation based on linked lists
+
+## Architecture Design
+
+### 🏗️ Core Interfaces
+- **Container**: Base container interface providing `Size()`, `IsEmpty()`, `Clear()`, `Contains()`, `String()` methods
 - **Iterable**: Provides iteration capability with `ForEach()` method
 - **Iterator**: Standard iterator pattern with `HasNext()`, `Next()`, `Remove()` methods
 - **Comparable**: Generic comparison interface for custom types
 
-#### Module Structure
-- `container/common`: Common interfaces and utilities
-- `container/list`: List implementations (ArrayList, LinkedList)
-- `container/set`: Set implementations (HashSet, TreeSet, ConcurrentSkipListSet)
-- `container/map`: Map implementations (HashMap, TreeMap, LinkedHashMap)
-- `container/queue`: Queue implementations
-- `container/stack`: Stack implementations
-- `examples`: Usage examples and demonstrations
+### 📁 Module Structure
+```
+container/
+├── common/     # Common interfaces and utilities
+├── list/       # List implementations (ArrayList, LinkedList)
+├── set/        # Set implementations (HashSet, TreeSet, ConcurrentSkipListSet)
+├── map/        # Map implementations (HashMap, TreeMap, LinkedHashMap)
+├── queue/      # Queue implementations
+└── stack/      # Stack implementations
+```
 
-### Implementation Highlights
+## Implementation Highlights
 
-#### Generic Support
-- Full generic type support based on Go 1.18+
+### 🔧 Generic Support
+- Complete generic type support based on Go 1.18+
 - Type-safe operations without runtime type assertions
 - Clean and intuitive API design
 
-#### Advanced Data Structures
-- **ConcurrentSkipListSet**: Lock-free concurrent skip list with O(log n) operations
+### 🚀 Advanced Data Structures
+- **ConcurrentSkipListSet**: Lock-free concurrent skip list with O(log n) operation complexity
 - **TreeMap/TreeSet**: Red-black tree implementation ensuring O(log n) complexity
-- **LinkedHashMap**: Hybrid approach using both chaining and tree conversion for optimal performance
+- **LinkedHashMap**: Hybrid approach using linked list and tree conversion for optimal performance
 
-#### High-Performance Features
+### ⚡ High-Performance Features
 - Efficient memory management
 - Optimized algorithms for common operations
 - Benchmark tests ensuring performance standards
 
-### Code Quality Analysis
+## Code Quality
 
-#### Strengths
+### ✅ Strengths
 1. **Comprehensive Test Coverage**: 9 test files with 3,915 lines of test code
-2. **Clean Architecture**: Well-defined interfaces and modular design
-3. **Performance Optimization**: Includes benchmark tests for critical operations
+2. **Clear Architecture**: Well-defined interfaces and modular design
+3. **Performance Optimized**: Includes benchmark tests for key operations
 4. **Thread Safety**: Provides concurrent implementations where needed
-5. **Documentation**: Extensive examples and clear API documentation
+5. **Well Documented**: Rich examples and clear API documentation
 
-#### Test Coverage Details
+### 📊 Test Coverage
 - `container/stack`: 100.0% coverage
 - `container/queue`: High coverage for core operations
-- `container/set`: 54.8% coverage (room for improvement)
+- `container/set`: 54.8% coverage
 - `container/map`: Good coverage for most implementations
 - `container/list`: Comprehensive test suite
 
-### 安装
+## Contributing
 
-```bash
-go get github.com/chenjianyu/collections
-```
+Issues and Pull Requests are welcome!
 
-### 使用示例
+## License
 
-```go
-package main
-
-import (
-	"fmt"
-	"github.com/chenjianyu/collections/container/list"
-	"github.com/chenjianyu/collections/container/set"
-	"github.com/chenjianyu/collections/container/map"
-)
-
-func main() {
-	// 创建ArrayList
-	list := list.New[int]()
-	list.Add(1)
-	list.Add(2)
-	list.Add(3)
-
-	fmt.Println("List size:", list.Size())
-	fmt.Println("List contains 2:", list.Contains(2))
-
-	// 创建HashSet
-	set := set.New[string]()
-	set.Add("apple")
-	set.Add("banana")
-	set.Add("apple") // 重复元素不会被添加
-
-	fmt.Println("Set size:", set.Size())
-	fmt.Println("Set elements:")
-	set.ForEach(func(item string) {
-		fmt.Println(item)
-	})
-
-	// 创建HashMap
-	hashMap := maps.NewLinkedHashMap[string, int]()
-	hashMap.Put("one", 1)
-	hashMap.Put("two", 2)
-
-	fmt.Println("Map size:", hashMap.Size())
-	if val, ok := hashMap.Get("one"); ok {
-		fmt.Println("Value for 'one':", val)
-	}
-
-	// 创建ConcurrentSkipListSet（线程安全的有序集合）
-	skipSet := set.NewConcurrentSkipListSet[int]()
-	skipSet.Add(5)
-	skipSet.Add(2)
-	skipSet.Add(8)
-	skipSet.Add(1)
-
-	fmt.Println("SkipSet (sorted):", skipSet) // 输出: [1, 2, 5, 8]
-	if first, ok := skipSet.First(); ok {
-		fmt.Println("First element:", first) // 输出: 1
-	}
-	if last, ok := skipSet.Last(); ok {
-		fmt.Println("Last element:", last) // 输出: 8
-	}
-
-	// 创建TreeMap（有序映射）
-	treeMap := maps.NewTreeMap[string, int]()
-	treeMap.Put("one", 1)
-	treeMap.Put("two", 2)
-	treeMap.Put("three", 3)
-
-	fmt.Println("TreeMap size:", treeMap.Size())
-	if val, ok := treeMap.Get("two"); ok {
-		fmt.Println("Value for 'two':", val)
-	}
-	
-	// 创建LinkedHashMap（类似Java的HashMap，链表长度超过阈值时转换为红黑树）
-	lhMap := maps.NewLinkedHashMap[string, int]()
-	lhMap.Put("one", 1)
-	lhMap.Put("two", 2)
-	lhMap.Put("three", 3)
-
-	fmt.Println("LinkedHashMap size:", lhMap.Size())
-	if val, ok := lhMap.Get("one"); ok {
-		fmt.Println("Value for 'one':", val)
-	}
-	
-	// 创建一个小容量的LinkedHashMap，以便更容易触发冲突和树化
-	collisionMap := maps.NewLinkedHashMapWithCapacity[int, string](4)
-	// 添加足够多的元素以触发冲突和树化
-	for i := 0; i < 20; i++ {
-		collisionMap.Put(i, fmt.Sprintf("value%d", i))
-	}
-}
-```
-
-### 支持的集合类型
-
-- **List**
-  - ArrayList: 基于动态数组的List实现
-  - LinkedList: 基于双向链表的List实现
-
-- **Set**
-  - HashSet: 基于哈希表的Set实现
-  - TreeSet: 基于红黑树的有序Set实现
-  - ConcurrentSkipListSet: 基于跳表的线程安全有序Set实现
-
-- **Map**
-  - HashMap: 基于哈希表的Map实现
-  - TreeMap: 基于红黑树的有序Map实现
-  - RedisHashMap: 基于Redis哈希表设计的Map实现，支持渐进式扩容和链表解决冲突
-  - LinkedHashMap: 基于链地址法和红黑树的Map实现，类似Java的HashMap，当链表长度超过阈值时转换为红黑树
-
-- **Queue**
-  - LinkedQueue: 基于链表的Queue实现
-  - PriorityQueue: 优先队列实现
-
-- **Stack**
-  - ArrayStack: 基于数组的Stack实现
-  - LinkedStack: 基于链表的Stack实现
-
-- **其他**
-  - Pair: 键值对
-  - MultiMap: 一个键对应多个值的Map
-  - BiMap: 双向Map
-
-### 架构设计
-
-项目采用了良好的架构设计，具有清晰的关注点分离：
-
-#### 核心接口
-- **Container**: 基础容器接口，提供 `Size()`、`IsEmpty()`、`Clear()`、`Contains()`、`String()` 方法
-- **Iterable**: 提供迭代能力，包含 `ForEach()` 方法
-- **Iterator**: 标准迭代器模式，包含 `HasNext()`、`Next()`、`Remove()` 方法
-- **Comparable**: 自定义类型的通用比较接口
-
-#### 模块结构
-- `container/common`: 通用接口和工具
-- `container/list`: List实现（ArrayList、LinkedList）
-- `container/set`: Set实现（HashSet、TreeSet、ConcurrentSkipListSet）
-- `container/map`: Map实现（HashMap、TreeMap、LinkedHashMap）
-- `container/queue`: Queue实现
-- `container/stack`: Stack实现
-- `examples`: 使用示例和演示
-
-### 实现亮点
-
-#### 泛型支持
-- 基于Go 1.18+的完整泛型类型支持
-- 类型安全操作，无需运行时类型断言
-- 简洁直观的API设计
-
-#### 高级数据结构
-- **ConcurrentSkipListSet**: 无锁并发跳表，O(log n)操作复杂度
-- **TreeMap/TreeSet**: 红黑树实现，确保O(log n)复杂度
-- **LinkedHashMap**: 混合方法，使用链表和树转换以获得最佳性能
-
-#### 高性能特性
-- 高效的内存管理
-- 常见操作的优化算法
-- 基准测试确保性能标准
-
-### 代码质量分析
-
-#### 优势
-1. **全面的测试覆盖**: 9个测试文件，3,915行测试代码
-2. **清晰的架构**: 定义良好的接口和模块化设计
-3. **性能优化**: 包含关键操作的基准测试
-4. **线程安全**: 在需要的地方提供并发实现
-5. **文档完善**: 丰富的示例和清晰的API文档
-
-#### 测试覆盖率详情
-- `container/stack`: 100.0% 覆盖率
-- `container/queue`: 核心操作高覆盖率
-- `container/set`: 54.8% 覆盖率（有改进空间）
-- `container/map`: 大部分实现具有良好覆盖率
-- `container/list`: 全面的测试套件
-
-### 改进建议
-
-#### 短期改进
-1. **提高测试覆盖率**: 特别是 `container/set` 模块
-2. **增强错误处理**: 添加更多边界条件检查
-3. **性能优化**: 针对特定场景进行微调
-
-#### 长期规划
-1. **扩展集合类型**: 添加更多专用数据结构
-2. **并发优化**: 提供更多线程安全的实现
-3. **内存优化**: 实现更高效的内存管理策略
-
-### Contributing | 贡献
-
-Welcome to submit issues and Pull Requests! | 欢迎提交问题和Pull Request！
-
-### License | 许可证
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. | 本项目采用MIT许可证 - 详见 [LICENSE](LICENSE) 文件。
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

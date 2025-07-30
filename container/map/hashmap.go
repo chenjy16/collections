@@ -6,52 +6,52 @@ import (
 	"sync"
 )
 
-// 使用已有的color类型作为节点颜色
-// color类型在treeset.go中已定义
+// Use existing color type as node color
+// color type is already defined in treeset.go
 
-// 链表节点阈值，当链表长度超过此值时转换为红黑树
+// Linked list node threshold, convert to red-black tree when list length exceeds this value
 const treeifyThreshold = 8
 
-// 红黑树节点阈值，当红黑树节点数小于此值时转换为链表
+// Red-black tree node threshold, convert to linked list when tree node count is less than this value
 const untreeifyThreshold = 6
 
-// 最小树化容量，当哈希表容量小于此值时，优先扩容而不是树化
+// Minimum treeify capacity, when hash table capacity is less than this value, prioritize expansion over treeification
 const minTreeifyCapacity = 64
 
-// 初始哈希表大小
+// Initial hash table size
 const initialCapacity = 16
 
-// 负载因子，当哈希表中的元素数量超过容量乘以负载因子时进行扩容
+// Load factor, expand when element count exceeds capacity multiplied by load factor
 const loadFactor = 0.75
 
-// LinkedHashMapNode 是链表/红黑树节点
+// LinkedHashMapNode is a linked list/red-black tree node
 type LinkedHashMapNode[K comparable, V any] struct {
 	key   K
 	value V
 	hash  uint64
 
-	// 链表指针
+	// Linked list pointers
 	next *LinkedHashMapNode[K, V]
 
-	// 红黑树指针
+	// Red-black tree pointers
 	left   *LinkedHashMapNode[K, V]
 	right  *LinkedHashMapNode[K, V]
 	parent *LinkedHashMapNode[K, V]
 	color  color
 
-	// 标记节点是否为树节点
+	// Mark whether node is a tree node
 	isTreeNode bool
 }
 
-// LinkedHashMap 是一个基于链地址法和红黑树的Map实现
+// LinkedHashMap is a Map implementation based on separate chaining and red-black trees
 type LinkedHashMap[K comparable, V any] struct {
-	table     []*LinkedHashMapNode[K, V] // 哈希桶数组
-	size      int                        // 元素数量
-	threshold int                        // 扩容阈值
-	mutex     sync.RWMutex               // 读写锁，保证线程安全
+	table     []*LinkedHashMapNode[K, V] // Hash bucket array
+	size      int                        // Element count
+	threshold int                        // Resize threshold
+	mutex     sync.RWMutex               // Read-write lock for thread safety
 }
 
-// NewLinkedHashMap 创建一个新的LinkedHashMap
+// NewLinkedHashMap creates a new LinkedHashMap
 func NewLinkedHashMap[K comparable, V any]() *LinkedHashMap[K, V] {
 	capacity := initialCapacity
 	return &LinkedHashMap[K, V]{
@@ -61,12 +61,12 @@ func NewLinkedHashMap[K comparable, V any]() *LinkedHashMap[K, V] {
 	}
 }
 
-// NewLinkedHashMapWithCapacity 创建一个具有指定初始容量的LinkedHashMap
+// NewLinkedHashMapWithCapacity creates a LinkedHashMap with specified initial capacity
 func NewLinkedHashMapWithCapacity[K comparable, V any](capacity int) *LinkedHashMap[K, V] {
 	if capacity < initialCapacity {
 		capacity = initialCapacity
 	} else {
-		// 确保容量是2的幂
+		// Ensure capacity is a power of 2
 		capacity = tableSizeFor(capacity)
 	}
 
@@ -77,7 +77,7 @@ func NewLinkedHashMapWithCapacity[K comparable, V any](capacity int) *LinkedHash
 	}
 }
 
-// tableSizeFor 返回大于等于cap的最小2的幂
+// tableSizeFor returns the smallest power of 2 greater than or equal to cap
 func tableSizeFor(cap int) int {
 	n := cap - 1
 	n |= n >> 1
@@ -89,12 +89,12 @@ func tableSizeFor(cap int) int {
 	return n + 1
 }
 
-// hash 计算键的哈希值
+// hash calculates the hash value of the key
 func (m *LinkedHashMap[K, V]) hash(key K) uint64 {
 	return Hash(key)
 }
 
-// Put 将指定的值与此映射中的指定键关联
+// Put associates the specified value with the specified key in this map
 func (m *LinkedHashMap[K, V]) Put(key K, value V) (V, bool) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -105,7 +105,7 @@ func (m *LinkedHashMap[K, V]) Put(key K, value V) (V, bool) {
 	hashValue := m.hash(key)
 	index := int(hashValue % uint64(len(m.table)))
 
-	// 如果桶为空，创建新节点
+	// If bucket is empty, create new node
 	if m.table[index] == nil {
 		m.table[index] = &LinkedHashMapNode[K, V]{
 			key:   key,
@@ -114,27 +114,27 @@ func (m *LinkedHashMap[K, V]) Put(key K, value V) (V, bool) {
 		}
 		m.size++
 
-		// 检查是否需要扩容
+		// Check if resize is needed
 		m.checkResize()
 
 		return oldValue, existed
 	}
 
-	// 如果是树节点，使用树查找和插入
+	// If it's a tree node, use tree search and insertion
 	if m.table[index].isTreeNode {
 		return m.putTreeVal(index, key, value, hashValue)
 	}
 
-	// 链表查找和插入
+	// Linked list search and insertion
 	p := m.table[index]
 	var prev *LinkedHashMapNode[K, V]
 	count := 0
 
-	// 遍历链表
+	// Traverse the linked list
 	for p != nil {
 		count++
 
-		// 如果找到相同的键，更新值
+		// If same key is found, update value
 		if p.hash == hashValue && Equal(p.key, key) {
 			oldValue = p.value
 			p.value = value
@@ -145,7 +145,7 @@ func (m *LinkedHashMap[K, V]) Put(key K, value V) (V, bool) {
 		p = p.next
 	}
 
-	// 没有找到相同的键，添加新节点到链表尾部
+	// No same key found, add new node to end of list
 	newNode := &LinkedHashMapNode[K, V]{
 		key:   key,
 		value: value,
@@ -154,18 +154,18 @@ func (m *LinkedHashMap[K, V]) Put(key K, value V) (V, bool) {
 	prev.next = newNode
 	m.size++
 
-	// 检查是否需要将链表转换为红黑树
+	// Check if linked list needs to be converted to red-black tree
 	if count >= treeifyThreshold-1 {
 		m.treeifyBin(index)
 	}
 
-	// 检查是否需要扩容
+	// Check if resize is needed
 	m.checkResize()
 
 	return oldValue, existed
 }
 
-// putTreeVal 在红黑树中插入或更新节点
+// putTreeVal inserts or updates node in red-black tree
 func (m *LinkedHashMap[K, V]) putTreeVal(index int, key K, value V, hash uint64) (V, bool) {
 	var oldValue V
 	existed := false
@@ -173,7 +173,7 @@ func (m *LinkedHashMap[K, V]) putTreeVal(index int, key K, value V, hash uint64)
 	root := m.table[index]
 	p := root
 
-	// 树查找
+	// Tree search
 	for p != nil {
 		cmp := 0
 		if p.hash > hash {
@@ -181,19 +181,19 @@ func (m *LinkedHashMap[K, V]) putTreeVal(index int, key K, value V, hash uint64)
 		} else if p.hash < hash {
 			cmp = 1
 		} else if Equal(key, p.key) {
-			// 找到相同的键，更新值
+			// Found same key, update value
 			oldValue = p.value
 			p.value = value
 			return oldValue, true
 		} else {
-			// 哈希相同但键不同，使用键的比较
+			// Same hash but different key, use key comparison
 			cmp = Compare(key, p.key)
 		}
 
-		// 根据比较结果决定向左还是向右
+		// Decide left or right based on comparison result
 		if cmp < 0 {
 			if p.left == nil {
-				// 插入到左子节点
+				// Insert as left child
 				p.left = &LinkedHashMapNode[K, V]{
 					key:        key,
 					value:      value,
@@ -209,7 +209,7 @@ func (m *LinkedHashMap[K, V]) putTreeVal(index int, key K, value V, hash uint64)
 			p = p.left
 		} else {
 			if p.right == nil {
-				// 插入到右子节点
+				// Insert as right child
 				p.right = &LinkedHashMapNode[K, V]{
 					key:        key,
 					value:      value,
@@ -226,22 +226,22 @@ func (m *LinkedHashMap[K, V]) putTreeVal(index int, key K, value V, hash uint64)
 		}
 	}
 
-	// 如果树为空，创建根节点
+	// If tree is empty, create root node
 	m.table[index] = &LinkedHashMapNode[K, V]{
 		key:        key,
 		value:      value,
 		hash:       hash,
 		isTreeNode: true,
-		color:      black, // 根节点为黑色
+		color:      black, // Root node is black
 	}
 	m.size++
 
 	return oldValue, existed
 }
 
-// balanceInsertion 插入后平衡红黑树
+// balanceInsertion after insertion
 func (m *LinkedHashMap[K, V]) balanceInsertion(root *LinkedHashMapNode[K, V], x *LinkedHashMapNode[K, V]) *LinkedHashMapNode[K, V] {
-	// 红黑树平衡调整
+	// Red-black tree balancing adjustment
 	x.color = red
 
 	for x != nil && x != root && x.parent.color == red {
@@ -284,7 +284,7 @@ func (m *LinkedHashMap[K, V]) balanceInsertion(root *LinkedHashMapNode[K, V], x 
 	return root
 }
 
-// rotateLeft 左旋转
+// rotateLeft left rotation
 func (m *LinkedHashMap[K, V]) rotateLeft(root *LinkedHashMapNode[K, V], p *LinkedHashMapNode[K, V]) *LinkedHashMapNode[K, V] {
 	if p != nil {
 		r := p.right
@@ -308,7 +308,7 @@ func (m *LinkedHashMap[K, V]) rotateLeft(root *LinkedHashMapNode[K, V], p *Linke
 	return root
 }
 
-// rotateRight 右旋转
+// rotateRight right rotation
 func (m *LinkedHashMap[K, V]) rotateRight(root *LinkedHashMapNode[K, V], p *LinkedHashMapNode[K, V]) *LinkedHashMapNode[K, V] {
 	if p != nil {
 		l := p.left
@@ -332,7 +332,7 @@ func (m *LinkedHashMap[K, V]) rotateRight(root *LinkedHashMapNode[K, V], p *Link
 	return root
 }
 
-// parentOf 获取节点的父节点
+// parentOf get node's parent
 func parentOf[K comparable, V any](p *LinkedHashMapNode[K, V]) *LinkedHashMapNode[K, V] {
 	if p == nil {
 		return nil
@@ -340,7 +340,7 @@ func parentOf[K comparable, V any](p *LinkedHashMapNode[K, V]) *LinkedHashMapNod
 	return p.parent
 }
 
-// leftOf 获取节点的左子节点
+// leftOf get node's left child
 func leftOf[K comparable, V any](p *LinkedHashMapNode[K, V]) *LinkedHashMapNode[K, V] {
 	if p == nil {
 		return nil
@@ -348,7 +348,7 @@ func leftOf[K comparable, V any](p *LinkedHashMapNode[K, V]) *LinkedHashMapNode[
 	return p.left
 }
 
-// rightOf 获取节点的右子节点
+// rightOf get node's right child
 func rightOf[K comparable, V any](p *LinkedHashMapNode[K, V]) *LinkedHashMapNode[K, V] {
 	if p == nil {
 		return nil
@@ -356,7 +356,7 @@ func rightOf[K comparable, V any](p *LinkedHashMapNode[K, V]) *LinkedHashMapNode
 	return p.right
 }
 
-// colorOf 获取节点的颜色
+// colorOf get node's color
 func colorOf[K comparable, V any](p *LinkedHashMapNode[K, V]) color {
 	if p == nil {
 		return black
@@ -364,44 +364,44 @@ func colorOf[K comparable, V any](p *LinkedHashMapNode[K, V]) color {
 	return p.color
 }
 
-// setColor 设置节点的颜色
+// setColor set node's color
 func setColor[K comparable, V any](p *LinkedHashMapNode[K, V], c color) {
 	if p != nil {
 		p.color = c
 	}
 }
 
-// treeifyBin 将指定索引处的链表转换为红黑树
+// treeifyBin convert specified index's list to red-black tree
 func (m *LinkedHashMap[K, V]) treeifyBin(index int) {
-	// 如果哈希表容量小于最小树化容量，优先扩容
+	// If hash table capacity is less than minimum treeify capacity, prioritize expansion
 	if len(m.table) < minTreeifyCapacity {
 		m.resize()
 		return
 	}
 
-	// 将链表转换为红黑树
+	// Convert list to red-black tree
 	root := m.table[index]
 	if root == nil {
 		return
 	}
 
-	// 标记所有节点为树节点
+	// Mark all nodes as tree nodes
 	p := root
 	for p != nil {
 		p.isTreeNode = true
 		p = p.next
 	}
 
-	// 构建红黑树
+	// Build red-black tree
 	root = m.buildTree(root)
 	m.table[index] = root
 }
 
-// buildTree 从链表构建红黑树
+// buildTree build red-black tree from list
 func (m *LinkedHashMap[K, V]) buildTree(head *LinkedHashMapNode[K, V]) *LinkedHashMapNode[K, V] {
 	var root *LinkedHashMapNode[K, V]
 
-	// 遍历链表，将每个节点插入到红黑树中
+	// Traverse list, insert each node to red-black tree
 	p := head
 	for p != nil {
 		next := p.next
@@ -417,7 +417,7 @@ func (m *LinkedHashMap[K, V]) buildTree(head *LinkedHashMapNode[K, V]) *LinkedHa
 			h := p.hash
 			dir := 0
 
-			// 查找插入位置
+			// Find insert position
 			cur := root
 			for {
 				ph := cur.hash
@@ -450,7 +450,7 @@ func (m *LinkedHashMap[K, V]) buildTree(head *LinkedHashMapNode[K, V]) *LinkedHa
 			p.parent = cur
 			p.color = red
 
-			// 平衡红黑树
+			// Balance red-black tree
 			root = m.balanceInsertion(root, p)
 		}
 
@@ -460,68 +460,68 @@ func (m *LinkedHashMap[K, V]) buildTree(head *LinkedHashMapNode[K, V]) *LinkedHa
 	return root
 }
 
-// checkResize 检查是否需要扩容
+// checkResize check if resize is needed
 func (m *LinkedHashMap[K, V]) checkResize() {
 	if m.size > m.threshold {
 		m.resize()
 	}
 }
 
-// resize 扩容哈希表
+// resize resize hash table
 func (m *LinkedHashMap[K, V]) resize() {
 	oldCap := len(m.table)
 	oldTab := m.table
 
-	// 计算新容量
+	// Compute new capacity
 	newCap := oldCap * 2
 	if newCap < initialCapacity {
 		newCap = initialCapacity
 	}
 
-	// 创建新表
+	// Create new table
 	newTab := make([]*LinkedHashMapNode[K, V], newCap)
 	m.table = newTab
 	m.threshold = int(float64(newCap) * loadFactor)
 
-	// 如果旧表为空，直接返回
+	// If old table is empty, directly return
 	if oldCap == 0 {
 		return
 	}
 
-	// 将旧表中的元素重新分配到新表中
+	// Reallocate old table elements to new table
 	for i := 0; i < oldCap; i++ {
 		e := oldTab[i]
 		if e == nil {
 			continue
 		}
 
-		// 清空旧表引用
+		// Clear old table reference
 		oldTab[i] = nil
 
-		// 如果是单个节点
+		// If it's a single node
 		if e.next == nil {
 			newIdx := int(e.hash % uint64(newCap))
 			newTab[newIdx] = e
 			continue
 		}
 
-		// 如果是树节点
+		// If it's a tree node
 		if e.isTreeNode {
 			m.splitTreeBin(newTab, e, i, oldCap)
 			continue
 		}
 
-		// 如果是链表，拆分为两个链表
-		// 一个链表放在原位置，一个链表放在原位置+oldCap
+		// If it's a list, split into two lists
+		// One list placed at original position, one list placed at original position+oldCap
 		var loHead, loTail, hiHead, hiTail *LinkedHashMapNode[K, V]
 
-		// 遍历链表
+		// Traverse list
 		for e != nil {
 			next := e.next
 
-			// 根据哈希值决定放在哪个链表
+			// Decide where to put the node
 			if (e.hash & uint64(oldCap)) == 0 {
-				// 放在原位置
+				// Place at original position
 				if loTail == nil {
 					loHead = e
 				} else {
@@ -529,7 +529,7 @@ func (m *LinkedHashMap[K, V]) resize() {
 				}
 				loTail = e
 			} else {
-				// 放在原位置+oldCap
+				// Place at original position+oldCap
 				if hiTail == nil {
 					hiHead = e
 				} else {
@@ -541,7 +541,7 @@ func (m *LinkedHashMap[K, V]) resize() {
 			e = next
 		}
 
-		// 更新链表引用
+		// Update list reference
 		if loTail != nil {
 			loTail.next = nil
 			newTab[i] = loHead
@@ -554,16 +554,16 @@ func (m *LinkedHashMap[K, V]) resize() {
 	}
 }
 
-// splitTreeBin 拆分树节点
+// splitTreeBin split tree node
 func (m *LinkedHashMap[K, V]) splitTreeBin(newTab []*LinkedHashMapNode[K, V], root *LinkedHashMapNode[K, V], index, oldCap int) {
-	// 将树节点转换回链表
+	// Convert tree node back to list
 	if len(newTab) <= untreeifyThreshold {
 		var head, tail *LinkedHashMapNode[K, V]
 
-		// 遍历树，构建链表
+		// Traverse tree, build list
 		m.treeToList(root, &head, &tail)
 
-		// 拆分链表
+		// Split list
 		var loHead, loTail, hiHead, hiTail *LinkedHashMapNode[K, V]
 		p := head
 
@@ -574,9 +574,9 @@ func (m *LinkedHashMap[K, V]) splitTreeBin(newTab []*LinkedHashMapNode[K, V], ro
 			p.parent = nil
 			p.isTreeNode = false
 
-			// 根据哈希值决定放在哪个链表
+			// Decide where to put the node
 			if (p.hash & uint64(oldCap)) == 0 {
-				// 放在原位置
+				// Place at original position
 				if loTail == nil {
 					loHead = p
 				} else {
@@ -584,7 +584,7 @@ func (m *LinkedHashMap[K, V]) splitTreeBin(newTab []*LinkedHashMapNode[K, V], ro
 				}
 				loTail = p
 			} else {
-				// 放在原位置+oldCap
+				// Place at original position+oldCap
 				if hiTail == nil {
 					hiHead = p
 				} else {
@@ -596,7 +596,7 @@ func (m *LinkedHashMap[K, V]) splitTreeBin(newTab []*LinkedHashMapNode[K, V], ro
 			p = next
 		}
 
-		// 更新链表引用
+		// Update list reference
 		if loTail != nil {
 			loTail.next = nil
 			newTab[index] = loHead
@@ -607,13 +607,13 @@ func (m *LinkedHashMap[K, V]) splitTreeBin(newTab []*LinkedHashMapNode[K, V], ro
 			newTab[index+oldCap] = hiHead
 		}
 	} else {
-		// 拆分树
+		// Split tree
 		var loTree, hiTree *LinkedHashMapNode[K, V]
 
-		// 遍历树，构建两棵新树
+		// Traverse tree, build two new trees
 		m.splitTree(root, &loTree, &hiTree, oldCap)
 
-		// 更新树引用
+		// Update tree reference
 		if loTree != nil {
 			newTab[index] = loTree
 		}
@@ -624,17 +624,17 @@ func (m *LinkedHashMap[K, V]) splitTreeBin(newTab []*LinkedHashMapNode[K, V], ro
 	}
 }
 
-// treeToList 将树转换为链表
+// treeToList convert tree to list
 func (m *LinkedHashMap[K, V]) treeToList(root *LinkedHashMapNode[K, V], head, tail **LinkedHashMapNode[K, V]) {
-	// 中序遍历树，构建链表
+	// In-order traverse tree, build list
 	if root == nil {
 		return
 	}
 
-	// 递归左子树
+	// Recursive left sub-tree
 	m.treeToList(root.left, head, tail)
 
-	// 处理当前节点
+	// Handle current node
 	root.left = nil
 	root.right = nil
 	root.parent = nil
@@ -647,52 +647,52 @@ func (m *LinkedHashMap[K, V]) treeToList(root *LinkedHashMapNode[K, V], head, ta
 	}
 	*tail = root
 
-	// 递归右子树
+	// Recursive right sub-tree
 	m.treeToList(root.right, head, tail)
 }
 
-// splitTree 拆分树
+// splitTree split tree
 func (m *LinkedHashMap[K, V]) splitTree(root *LinkedHashMapNode[K, V], loTree, hiTree **LinkedHashMapNode[K, V], oldCap int) {
 	if root == nil {
 		return
 	}
 
-	// 先保存子节点引用
+	// Save sub-node reference
 	left := root.left
 	right := root.right
 
-	// 清理当前节点的引用
+	// Clean current node reference
 	root.left = nil
 	root.right = nil
 	root.parent = nil
 
-	// 根据哈希值决定放在哪棵树
+	// Decide where to put the node
 	if (root.hash & uint64(oldCap)) == 0 {
-		// 放在原位置
+		// Place at original position
 		if *loTree == nil {
 			*loTree = root
 			root.color = black
 		} else {
-			// 简单插入到loTree，不进行平衡
+			// Simple insert to loTree, no balancing
 			m.insertNodeSimple(loTree, root)
 		}
 	} else {
-		// 放在原位置+oldCap
+		// Place at original position+oldCap
 		if *hiTree == nil {
 			*hiTree = root
 			root.color = black
 		} else {
-			// 简单插入到hiTree，不进行平衡
+			// Simple insert to hiTree, no balancing
 			m.insertNodeSimple(hiTree, root)
 		}
 	}
 
-	// 递归处理子树
+	// Recursive handle sub-tree
 	m.splitTree(left, loTree, hiTree, oldCap)
 	m.splitTree(right, loTree, hiTree, oldCap)
 }
 
-// insertNodeSimple 简单插入节点到树中，不进行平衡
+// insertNodeSimple simple insert node to tree, no balancing
 func (m *LinkedHashMap[K, V]) insertNodeSimple(root **LinkedHashMapNode[K, V], node *LinkedHashMapNode[K, V]) {
 	p := *root
 	for {
@@ -725,7 +725,7 @@ func (m *LinkedHashMap[K, V]) insertNodeSimple(root **LinkedHashMapNode[K, V], n
 	}
 }
 
-// Get 返回指定键所映射的值
+// Get return value mapped to the key
 func (m *LinkedHashMap[K, V]) Get(key K) (V, bool) {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
@@ -733,17 +733,17 @@ func (m *LinkedHashMap[K, V]) Get(key K) (V, bool) {
 	hashValue := m.hash(key)
 	index := int(hashValue % uint64(len(m.table)))
 
-	// 如果桶为空，返回零值
+	// If bucket is empty, return zero value
 	if m.table[index] == nil {
 		return *new(V), false
 	}
 
-	// 如果是树节点，使用树查找
+	// If it's a tree node, use tree search
 	if m.table[index].isTreeNode {
 		return m.getTreeVal(m.table[index], key, hashValue)
 	}
 
-	// 链表查找
+	// Linked list search
 	p := m.table[index]
 	for p != nil {
 		if p.hash == hashValue && Equal(p.key, key) {
@@ -755,11 +755,11 @@ func (m *LinkedHashMap[K, V]) Get(key K) (V, bool) {
 	return *new(V), false
 }
 
-// getTreeVal 在红黑树中查找节点
+// getTreeVal search node in red-black tree
 func (m *LinkedHashMap[K, V]) getTreeVal(root *LinkedHashMapNode[K, V], key K, hash uint64) (V, bool) {
 	p := root
 
-	// 树查找
+	// Tree search
 	for p != nil {
 		cmp := 0
 		if p.hash > hash {
@@ -767,14 +767,14 @@ func (m *LinkedHashMap[K, V]) getTreeVal(root *LinkedHashMapNode[K, V], key K, h
 		} else if p.hash < hash {
 			cmp = 1
 		} else if Equal(key, p.key) {
-			// 找到相同的键，返回值
+			// Find same key, return value
 			return p.value, true
 		} else {
-			// 哈希相同但键不同，使用键的比较
+			// Hash same but different key, use key comparison
 			cmp = Compare(key, p.key)
 		}
 
-		// 根据比较结果决定向左还是向右
+		// Decide left or right based on comparison result
 		if cmp < 0 {
 			p = p.left
 		} else {
@@ -785,7 +785,7 @@ func (m *LinkedHashMap[K, V]) getTreeVal(root *LinkedHashMapNode[K, V], key K, h
 	return *new(V), false
 }
 
-// Remove 如果存在，则从此映射中移除指定键的映射关系
+// Remove if exists, removes mapping relationship for the key
 func (m *LinkedHashMap[K, V]) Remove(key K) (V, bool) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -793,30 +793,30 @@ func (m *LinkedHashMap[K, V]) Remove(key K) (V, bool) {
 	hashValue := m.hash(key)
 	index := int(hashValue % uint64(len(m.table)))
 
-	// 如果桶为空，返回零值
+	// If bucket is empty, return zero value
 	if m.table[index] == nil {
 		return *new(V), false
 	}
 
-	// 如果是树节点，使用树删除
+	// If it's a tree node, use tree delete
 	if m.table[index].isTreeNode {
 		return m.removeTreeNode(index, key, hashValue)
 	}
 
-	// 链表删除
+	// Linked list delete
 	p := m.table[index]
 	var prev *LinkedHashMapNode[K, V]
 
 	for p != nil {
 		if p.hash == hashValue && Equal(p.key, key) {
-			// 找到要删除的节点
+			// Find node to delete
 			oldValue := p.value
 
 			if prev == nil {
-				// 删除链表头部
+				// Delete list head
 				m.table[index] = p.next
 			} else {
-				// 删除链表中间或尾部
+				// Delete list middle or tail
 				prev.next = p.next
 			}
 
@@ -831,12 +831,12 @@ func (m *LinkedHashMap[K, V]) Remove(key K) (V, bool) {
 	return *new(V), false
 }
 
-// removeTreeNode 从红黑树中删除节点
+// removeTreeNode remove node from red-black tree
 func (m *LinkedHashMap[K, V]) removeTreeNode(index int, key K, hash uint64) (V, bool) {
 	root := m.table[index]
 	p := root
 
-	// 查找要删除的节点
+	// Find node to delete
 	for p != nil {
 		cmp := 0
 		if p.hash > hash {
@@ -844,14 +844,14 @@ func (m *LinkedHashMap[K, V]) removeTreeNode(index int, key K, hash uint64) (V, 
 		} else if p.hash < hash {
 			cmp = 1
 		} else if Equal(key, p.key) {
-			// 找到要删除的节点
+			// Find node to delete
 			break
 		} else {
-			// 哈希相同但键不同，使用键的比较
+			// Hash same but different key, use key comparison
 			cmp = Compare(key, p.key)
 		}
 
-		// 根据比较结果决定向左还是向右
+		// Decide left or right based on comparison result
 		if cmp < 0 {
 			p = p.left
 		} else {
@@ -859,27 +859,27 @@ func (m *LinkedHashMap[K, V]) removeTreeNode(index int, key K, hash uint64) (V, 
 		}
 	}
 
-	// 如果没有找到节点，返回零值
+	// If node is not found, return zero value
 	if p == nil {
 		return *new(V), false
 	}
 
 	oldValue := p.value
 
-	// 删除节点
+	// Delete node
 	if p.left != nil && p.right != nil {
-		// 如果有两个子节点，找到后继节点
+		// If node has two children, find successor
 		s := p.right
 		for s.left != nil {
 			s = s.left
 		}
 
-		// 用后继节点的值替换当前节点的值
+		// Replace current node value with successor value
 		p.key = s.key
 		p.value = s.value
 		p.hash = s.hash
 
-		// 删除后继节点
+		// Delete successor
 		if s.parent == p {
 			p.right = s.right
 			if s.right != nil {
@@ -892,15 +892,15 @@ func (m *LinkedHashMap[K, V]) removeTreeNode(index int, key K, hash uint64) (V, 
 			}
 		}
 	} else {
-		// 如果最多有一个子节点
+		// If node has at most one child
 		replacement := p.left
 		if p.left == nil {
 			replacement = p.right
 		}
 
-		// 用子节点替换当前节点
+		// Replace node with child node
 		if p.parent == nil {
-			// 如果是根节点
+			// If it's a root node
 			m.table[index] = replacement
 		} else if p == p.parent.left {
 			p.parent.left = replacement
@@ -913,14 +913,14 @@ func (m *LinkedHashMap[K, V]) removeTreeNode(index int, key K, hash uint64) (V, 
 		}
 	}
 
-	// 平衡红黑树
+	// Balance red-black tree
 	if p.color == black {
 		m.balanceDeletion(root, p)
 	}
 
 	m.size--
 
-	// 如果树太小，转换回链表
+	// If tree is too small, convert to list
 	if m.size <= untreeifyThreshold {
 		m.untreeify(index)
 	}
@@ -928,9 +928,9 @@ func (m *LinkedHashMap[K, V]) removeTreeNode(index int, key K, hash uint64) (V, 
 	return oldValue, true
 }
 
-// balanceDeletion 删除后平衡红黑树
+// balanceDeletion after deletion
 func (m *LinkedHashMap[K, V]) balanceDeletion(root *LinkedHashMapNode[K, V], x *LinkedHashMapNode[K, V]) *LinkedHashMapNode[K, V] {
-	// 红黑树删除平衡调整
+	// Red-black tree delete balancing adjustment
 	for x != root && colorOf(x) == black {
 		if x == leftOf(parentOf(x)) {
 			sib := rightOf(parentOf(x))
@@ -991,28 +991,28 @@ func (m *LinkedHashMap[K, V]) balanceDeletion(root *LinkedHashMapNode[K, V], x *
 	return root
 }
 
-// untreeify 将指定索引处的红黑树转换为链表
+// untreeify convert specified index's red-black tree to list
 func (m *LinkedHashMap[K, V]) untreeify(index int) {
 	root := m.table[index]
 	if root == nil || !root.isTreeNode {
 		return
 	}
 
-	// 将树转换为链表
+	// Convert tree to list
 	var head, tail *LinkedHashMapNode[K, V]
 	m.treeToList(root, &head, &tail)
 
-	// 更新链表引用
+	// Update list reference
 	m.table[index] = head
 }
 
-// ContainsKey 如果此映射包含指定键的映射关系，则返回true
+// ContainsKey if this mapping contains the key's mapping, returns true
 func (m *LinkedHashMap[K, V]) ContainsKey(key K) bool {
 	_, found := m.Get(key)
 	return found
 }
 
-// ContainsValue 如果此映射将一个或多个键映射到指定值，则返回true
+// ContainsValue if this mapping maps one or more keys to the specified value, returns true
 func (m *LinkedHashMap[K, V]) ContainsValue(value V) bool {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
@@ -1022,24 +1022,24 @@ func (m *LinkedHashMap[K, V]) ContainsValue(value V) bool {
 	})
 }
 
-// Size 返回此映射中的键-值映射关系数
+// Size returns the number of key-value mapping relationships in this mapping
 func (m *LinkedHashMap[K, V]) Size() int {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 	return m.size
 }
 
-// IsEmpty 如果此映射不包含键-值映射关系，则返回true
+// IsEmpty if this mapping does not contain key-value mapping relationships, returns true
 func (m *LinkedHashMap[K, V]) IsEmpty() bool {
 	return m.Size() == 0
 }
 
-// Clear 从此映射中移除所有映射关系
+// Clear removes all mapping relationships from this mapping
 func (m *LinkedHashMap[K, V]) Clear() {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	// 清空哈希表，并帮助GC回收内存
+	// Clear hash table, help GC recycle memory
 	for i := range m.table {
 		if m.table[i] != nil {
 			m.clearNode(m.table[i])
@@ -1050,13 +1050,13 @@ func (m *LinkedHashMap[K, V]) Clear() {
 	m.size = 0
 }
 
-// clearNode 递归清理节点以帮助GC
+// clearNode recursively clean up nodes to help GC
 func (m *LinkedHashMap[K, V]) clearNode(node *LinkedHashMapNode[K, V]) {
 	if node == nil {
 		return
 	}
 
-	// 如果是树节点，递归清理子节点
+	// If it's a tree node, recursively clean up child nodes
 	if node.isTreeNode {
 		m.clearNode(node.left)
 		m.clearNode(node.right)
@@ -1065,7 +1065,7 @@ func (m *LinkedHashMap[K, V]) clearNode(node *LinkedHashMapNode[K, V]) {
 		node.parent = nil
 	}
 
-	// 清理链表节点
+	// Clean list node
 	for node.next != nil {
 		next := node.next
 		node.next = nil
@@ -1073,7 +1073,7 @@ func (m *LinkedHashMap[K, V]) clearNode(node *LinkedHashMapNode[K, V]) {
 	}
 }
 
-// Keys 返回此映射中包含的键的集合视图
+// Keys returns the keys contained in this mapping
 func (m *LinkedHashMap[K, V]) Keys() []K {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
@@ -1086,7 +1086,7 @@ func (m *LinkedHashMap[K, V]) Keys() []K {
 	return keys
 }
 
-// Values 返回此映射中包含的值的集合视图
+// Values returns the values contained in this mapping
 func (m *LinkedHashMap[K, V]) Values() []V {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
@@ -1099,7 +1099,7 @@ func (m *LinkedHashMap[K, V]) Values() []V {
 	return values
 }
 
-// inOrderTraversal 中序遍历红黑树
+// inOrderTraversal in-order traverse red-black tree
 func (m *LinkedHashMap[K, V]) inOrderTraversal(root *LinkedHashMapNode[K, V], f func(*LinkedHashMapNode[K, V])) {
 	if root == nil {
 		return
@@ -1110,17 +1110,17 @@ func (m *LinkedHashMap[K, V]) inOrderTraversal(root *LinkedHashMapNode[K, V], f 
 	m.inOrderTraversal(root.right, f)
 }
 
-// traverseAll 遍历所有节点，包括链表和树节点
+// traverseAll traverse all nodes, including linked list and tree nodes
 func (m *LinkedHashMap[K, V]) traverseAll(f func(*LinkedHashMapNode[K, V])) {
-	// 遍历哈希表
+	// Traverse hash table
 	for _, e := range m.table {
 		p := e
 		for p != nil {
 			f(p)
 			if p.isTreeNode {
-				// 如果是树节点，使用中序遍历其他节点
+				// If it's a tree node, use in-order traverse other nodes
 				m.inOrderTraversal(p, func(node *LinkedHashMapNode[K, V]) {
-					if node != p { // 避免重复处理根节点
+					if node != p { // Avoid repeat processing root node
 						f(node)
 					}
 				})
@@ -1131,9 +1131,9 @@ func (m *LinkedHashMap[K, V]) traverseAll(f func(*LinkedHashMapNode[K, V])) {
 	}
 }
 
-// traverseAllWithEarlyExit 遍历所有节点，支持提前退出
+// traverseAllWithEarlyExit traverse all nodes, support early exit
 func (m *LinkedHashMap[K, V]) traverseAllWithEarlyExit(f func(*LinkedHashMapNode[K, V]) bool) bool {
-	// 遍历哈希表
+	// Traverse hash table
 	for _, e := range m.table {
 		p := e
 		for p != nil {
@@ -1141,10 +1141,10 @@ func (m *LinkedHashMap[K, V]) traverseAllWithEarlyExit(f func(*LinkedHashMapNode
 				return true
 			}
 			if p.isTreeNode {
-				// 如果是树节点，使用中序遍历其他节点
+				// If it's a tree node, use in-order traverse other nodes
 				found := false
 				m.inOrderTraversalWithEarlyExit(p, func(node *LinkedHashMapNode[K, V]) bool {
-					if node != p { // 避免重复处理根节点
+					if node != p { // Avoid repeat processing root node
 						return f(node)
 					}
 					return false
@@ -1160,7 +1160,7 @@ func (m *LinkedHashMap[K, V]) traverseAllWithEarlyExit(f func(*LinkedHashMapNode
 	return false
 }
 
-// inOrderTraversalWithEarlyExit 中序遍历红黑树，支持提前退出
+// inOrderTraversalWithEarlyExit in-order traverse red-black tree, support early exit
 func (m *LinkedHashMap[K, V]) inOrderTraversalWithEarlyExit(root *LinkedHashMapNode[K, V], f func(*LinkedHashMapNode[K, V]) bool, found *bool) {
 	if root == nil || *found {
 		return
@@ -1174,7 +1174,7 @@ func (m *LinkedHashMap[K, V]) inOrderTraversalWithEarlyExit(root *LinkedHashMapN
 	m.inOrderTraversalWithEarlyExit(root.right, f, found)
 }
 
-// ForEach 对此映射中的每个条目执行给定的操作
+// ForEach execute the action for each entry
 func (m *LinkedHashMap[K, V]) ForEach(f func(K, V)) {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
@@ -1184,14 +1184,14 @@ func (m *LinkedHashMap[K, V]) ForEach(f func(K, V)) {
 	})
 }
 
-// PutAll 将指定映射中的所有映射关系复制到此映射
+// PutAll put all mapping relationships from the specified mapping to this mapping
 func (m *LinkedHashMap[K, V]) PutAll(other Map[K, V]) {
 	other.ForEach(func(k K, v V) {
 		m.Put(k, v)
 	})
 }
 
-// String 返回映射的字符串表示
+// String returns the string representation of the mapping
 func (m *LinkedHashMap[K, V]) String() string {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
@@ -1216,7 +1216,7 @@ func (m *LinkedHashMap[K, V]) String() string {
 	return sb.String()
 }
 
-// Entries 返回此映射中包含的映射关系的集合视图
+// Entries returns the mapping relationships contained in this mapping
 func (m *LinkedHashMap[K, V]) Entries() []Pair[K, V] {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
