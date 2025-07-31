@@ -20,6 +20,7 @@ func RunContainerExamples() {
 	// Run various container examples
 	ArrayListExample()
 	HashSetExample()
+	LinkedHashSetExample()
 	LinkedListExample()
 	PriorityQueueExample()
 	ArrayStackExample()

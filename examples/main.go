@@ -1,6 +1,18 @@
 package main
 
+import (
+	"fmt"
+	"strings"
+)
+
 func main() {
-	// Run container library examples
+	fmt.Println("Go Collections Library Examples")
+	fmt.Println("================================")
+
+	// Run all container examples
 	RunContainerExamples()
+
+	// Run iterator examples
+	fmt.Println("\n" + strings.Repeat("=", 50))
+	RunIteratorExamples()
 }
