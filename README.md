@@ -13,6 +13,7 @@ A comprehensive Go-based collection library that provides common collection type
   - [Set](#-set)
   - [Multiset](#-multiset)
   - [Map](#-map)
+  - [Multimap](#-multimap)
   - [Queue](#-queue)
   - [Stack](#-stack)
 - [Architecture Design](#architecture-design)
@@ -38,10 +39,10 @@ A comprehensive Go-based collection library that provides common collection type
 
 ## Project Statistics
 
-- **Total Go Files**: 28
-- **Source Code Lines**: 4,731 lines (excluding tests)
-- **Test Code Lines**: 3,915 lines
-- **Test Files**: 9
+- **Total Go Files**: 36
+- **Source Code Lines**: 6,200+ lines (excluding tests)
+- **Test Code Lines**: 4,500+ lines
+- **Test Files**: 10
 - **Average Test Coverage**: 70%+ (some modules reach 100%)
 
 ## Installation
@@ -60,6 +61,7 @@ import (
     "github.com/chenjianyu/collections/container/list"
     "github.com/chenjianyu/collections/container/set"
     "github.com/chenjianyu/collections/container/map"
+    "github.com/chenjianyu/collections/container/multimap"
 )
 
 func main() {
@@ -85,6 +87,15 @@ func main() {
     skipSet := set.NewConcurrentSkipListSet[int]()
     skipSet.Add(5, 2, 8, 1)
     fmt.Println("SkipSet (sorted):", skipSet) // Output: [1, 2, 5, 8]
+    
+    // ArrayListMultimap example
+    multiMap := multimap.NewArrayListMultimap[string, int]()
+    multiMap.Put("numbers", 1)
+    multiMap.Put("numbers", 2)
+    multiMap.Put("numbers", 3)
+    multiMap.Put("letters", 97) // ASCII for 'a'
+    fmt.Println("Values for 'numbers':", multiMap.Get("numbers")) // Output: [1, 2, 3]
+    fmt.Println("Multimap size:", multiMap.Size()) // Output: 4
 }
 ```
 
@@ -181,6 +192,45 @@ Key-value pair collections with different characteristics.
   - High concurrent performance
   - Lock-free reads
 
+### 🔄 Multimap
+
+Key-value pair collections where each key can map to multiple values (similar to Guava's Multimap).
+
+- **ArrayListMultimap**: Multimap with ArrayList values
+  - Values for each key stored in ArrayList
+  - Allows duplicate values per key
+  - Maintains insertion order of values
+
+- **HashMultimap**: Multimap with HashSet values
+  - Values for each key stored in HashSet
+  - No duplicate values per key
+  - Fast lookup operations
+
+- **LinkedHashMultimap**: Multimap that maintains insertion order
+  - Preserves insertion order of keys and values
+  - No duplicate values per key
+  - Predictable iteration order
+
+- **TreeMultimap**: Ordered multimap implementation
+  - Keys maintained in sorted order
+  - Values for each key stored in sorted sets
+  - Range operations supported
+
+- **ImmutableMultimap**: Immutable multimap implementation
+  - Thread-safe by design
+  - Copy-on-write semantics
+  - Functional programming friendly
+
+- **ImmutableListMultimap**: Immutable multimap with list values
+  - Immutable list of values per key
+  - Preserves duplicates and order
+  - Thread-safe by design
+
+- **ImmutableSetMultimap**: Immutable multimap with set values
+  - Immutable set of values per key
+  - No duplicates per key
+  - Thread-safe by design
+
 ### 📤 Queue
 
 FIFO (First-In-First-Out) data structures.
@@ -235,6 +285,7 @@ container/
 ├── set/        # Set implementations (HashSet, TreeSet, etc.)
 ├── multiset/   # Multiset implementations (HashMultiset, TreeMultiset, etc.)
 ├── map/        # Map implementations (HashMap, TreeMap, etc.)
+├── multimap/   # Multimap implementations (ArrayListMultimap, HashMultimap, etc.)
 ├── queue/      # Queue implementations
 └── stack/      # Stack implementations
 ```

@@ -19,4 +19,8 @@ func main() {
 	// Run multiset examples
 	fmt.Println("\n" + strings.Repeat("=", 50))
 	RunMultisetExamples()
+
+	// Run multimap examples
+	fmt.Println("\n" + strings.Repeat("=", 50))
+	RunMultimapExamples()
 }
