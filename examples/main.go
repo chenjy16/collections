@@ -15,4 +15,8 @@ func main() {
 	// Run iterator examples
 	fmt.Println("\n" + strings.Repeat("=", 50))
 	RunIteratorExamples()
+
+	// Run multiset examples
+	fmt.Println("\n" + strings.Repeat("=", 50))
+	RunMultisetExamples()
 }

@@ -11,6 +11,7 @@ A comprehensive Go-based collection library that provides common collection type
 - [Collection Types](#collection-types)
   - [List](#-list)
   - [Set](#-set)
+  - [Multiset](#-multiset)
   - [Map](#-map)
   - [Queue](#-queue)
   - [Stack](#-stack)
@@ -127,6 +128,35 @@ Unique element collections with various ordering guarantees.
   - Lock-free concurrent access
   - Scalable for high concurrency
 
+### 🔢 Multiset
+
+Collections that allow duplicate elements with counting functionality (similar to Guava's Multiset).
+
+- **HashMultiset**: Hash table-based multiset
+  - O(1) average add/remove/count operations
+  - No ordering guarantee
+  - Best for fast counting operations
+
+- **TreeMultiset**: Red-black tree-based ordered multiset
+  - O(log n) operations
+  - Natural ordering maintained
+  - Sorted iteration of elements
+
+- **LinkedHashMultiset**: Hash multiset that maintains insertion order
+  - O(1) average operations
+  - Preserves insertion order
+  - Ideal for ordered counting
+
+- **ConcurrentHashMultiset**: Thread-safe hash multiset
+  - Segment-based locking for high concurrency
+  - Lock-free reads
+  - Scalable concurrent counting
+
+- **ImmutableMultiset**: Immutable multiset implementation
+  - Copy-on-write semantics
+  - Thread-safe by design
+  - Functional programming friendly
+
 ### 🗺️ Map
 
 Key-value pair collections with different characteristics.
@@ -203,6 +233,7 @@ container/
 ├── common/     # Common interfaces and utilities
 ├── list/       # List implementations (ArrayList, LinkedList)
 ├── set/        # Set implementations (HashSet, TreeSet, etc.)
+├── multiset/   # Multiset implementations (HashMultiset, TreeMultiset, etc.)
 ├── map/        # Map implementations (HashMap, TreeMap, etc.)
 ├── queue/      # Queue implementations
 └── stack/      # Stack implementations
@@ -329,6 +360,17 @@ union := set1.Union(set2)        // {1, 2, 3, 4, 5}
 intersection := set1.Intersection(set2) // {3}
 difference := set1.Difference(set2)     // {1, 2}
 
+// Multiset operations (counting collections)
+multiset := multiset.NewHashMultiset[string]()
+multiset.Add("apple")
+multiset.Add("banana")
+multiset.Add("apple")  // Duplicates allowed
+multiset.AddCount("orange", 3)
+
+fmt.Println(multiset.Count("apple"))   // 2
+fmt.Println(multiset.TotalSize())      // 6
+fmt.Println(multiset.DistinctElements()) // 3
+
 // Map operations
 m := maps.NewHashMap[string, int]()
 m.Put("one", 1)
@@ -395,6 +437,23 @@ Contains(element E) bool       // Check membership
 Union(other Set[E]) Set[E]     // Set union
 Intersection(other Set[E]) Set[E] // Set intersection
 Difference(other Set[E]) Set[E]   // Set difference
+```
+
+#### Multiset Interface
+```go
+Add(element E)                    // Add single element
+AddCount(element E, count int)    // Add element with count
+Remove(element E) bool            // Remove one occurrence
+RemoveAll(element E) int          // Remove all occurrences
+Count(element E) int              // Get element count
+SetCount(element E, count int)    // Set element count
+TotalSize() int                   // Total number of elements
+DistinctElements() int            // Number of unique elements
+ElementSet() []E                  // Get unique elements
+EntrySet() []Entry[E]             // Get element-count pairs
+Union(other Multiset[E]) Multiset[E]        // Multiset union
+Intersection(other Multiset[E]) Multiset[E] // Multiset intersection
+Difference(other Multiset[E]) Multiset[E]   // Multiset difference
 ```
 
 #### Map Interface
