@@ -23,4 +23,8 @@ func main() {
 	// Run multimap examples
 	fmt.Println("\n" + strings.Repeat("=", 50))
 	RunMultimapExamples()
+
+	// Run range examples
+	fmt.Println("\n" + strings.Repeat("=", 50))
+	rangeExample()
 }

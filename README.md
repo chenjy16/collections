@@ -16,6 +16,7 @@ A comprehensive Go-based collection library that provides common collection type
   - [Multimap](#-multimap)
   - [Queue](#-queue)
   - [Stack](#-stack)
+  - [Range](#-range)
 - [Architecture Design](#architecture-design)
 - [Core Features](#core-features)
 - [Iterator Pattern](#iterator-pattern)
@@ -62,6 +63,7 @@ import (
     "github.com/chenjianyu/collections/container/set"
     "github.com/chenjianyu/collections/container/map"
     "github.com/chenjianyu/collections/container/multimap"
+    "github.com/chenjianyu/collections/container/range"
 )
 
 func main() {
@@ -96,6 +98,25 @@ func main() {
     multiMap.Put("letters", 97) // ASCII for 'a'
     fmt.Println("Values for 'numbers':", multiMap.Get("numbers")) // Output: [1, 2, 3]
     fmt.Println("Multimap size:", multiMap.Size()) // Output: 4
+    
+    // Range example
+    r1 := ranges.ClosedRange(1, 10)     // [1, 10]
+    r2 := ranges.OpenRange(5, 15)       // (5, 15)
+    fmt.Println("Range contains 5:", r1.Contains(5)) // true
+    
+    // RangeSet example
+    rs := ranges.NewTreeRangeSet[int]()
+    rs.Add(r1)
+    rs.Add(r2)
+    fmt.Println("RangeSet contains 8:", rs.ContainsValue(8)) // true
+    
+    // RangeMap example
+    rm := ranges.NewTreeRangeMap[int, string]()
+    rm.Put(r1, "first range")
+    rm.Put(r2, "second range")
+    if value, ok := rm.Get(8); ok {
+        fmt.Println("Value for 8:", value) // "first range"
+    }
 }
 ```
 
@@ -245,6 +266,27 @@ LIFO (Last-In-First-Out) data structures.
 - **ArrayStack**: Array-based stack implementation
 - **LinkedStack**: Linked list-based stack implementation
 
+### 📏 Range
+
+Guava-style range collections for interval data management.
+
+- **Range[T]**: Represents a range of values with configurable bounds
+  - Support for open and closed bounds
+  - Range operations (intersection, union, contains)
+  - Comparable value support
+
+- **RangeSet[T]**: Set of non-overlapping ranges
+  - **TreeRangeSet**: Mutable implementation with O(log n) operations
+  - **ImmutableRangeSet**: Immutable implementation returning new instances
+  - Set operations (union, intersection, difference, complement)
+  - Efficient range merging and splitting
+
+- **RangeMap[K,V]**: Mapping from ranges to values
+  - **TreeRangeMap**: Mutable implementation with O(log n) operations  
+  - **ImmutableRangeMap**: Immutable implementation returning new instances
+  - Non-overlapping range keys
+  - Efficient range-based lookups
+
 ## Architecture Design
 
 ### 🏗️ Core Interfaces
@@ -287,7 +329,8 @@ container/
 ├── map/        # Map implementations (HashMap, TreeMap, etc.)
 ├── multimap/   # Multimap implementations (ArrayListMultimap, HashMultimap, etc.)
 ├── queue/      # Queue implementations
-└── stack/      # Stack implementations
+├── stack/      # Stack implementations
+└── range/      # Range implementations (Range, RangeSet, RangeMap)
 ```
 
 ## Core Features
