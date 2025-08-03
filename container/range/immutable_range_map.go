@@ -208,9 +208,13 @@ func (irm *ImmutableRangeMap[K, V]) Span() (Range[K], bool) {
 		return irm.entries[0].Range, true
 	}
 	
-	// For now, return the first range as a placeholder
-	// TODO: Implement proper span calculation when Range interface is complete
-	return irm.entries[0].Range, true
+	// Calculate the span of all ranges
+	span := irm.entries[0].Range
+	for i := 1; i < len(irm.entries); i++ {
+		span = span.Span(irm.entries[i].Range)
+	}
+	
+	return span, true
 }
 
 // SubRangeMap returns a view of the portion of this range map that intersects with the given range

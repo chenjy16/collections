@@ -1,6 +1,7 @@
 package ranges
 
 import (
+	"sort"
 	"strings"
 	"sync"
 )
@@ -143,9 +144,16 @@ func (trm *TreeRangeMap[K, V]) Remove(rangeToRemove Range[K]) {
 			// Range to remove completely contains the entry, remove it
 			continue
 		} else {
-			// For partial overlaps, we'll keep the entry for now
-			// TODO: Implement proper range splitting when Range interface is complete
-			newEntries = append(newEntries, entry)
+			// Partial overlap - split the range
+			splitRanges := trm.splitRange(entry.Range, rangeToRemove)
+			for _, splitRange := range splitRanges {
+				if !splitRange.IsEmpty() {
+					newEntries = append(newEntries, Entry[K, V]{
+						Range: splitRange,
+						Value: entry.Value,
+					})
+				}
+			}
 		}
 	}
 	
@@ -173,9 +181,13 @@ func (trm *TreeRangeMap[K, V]) Span() (Range[K], bool) {
 		return trm.entries[0].Range, true
 	}
 	
-	// For now, return the first range as a placeholder
-	// TODO: Implement proper span calculation when Range interface is complete
-	return trm.entries[0].Range, true
+	// Calculate the span of all ranges
+	span := trm.entries[0].Range
+	for i := 1; i < len(trm.entries); i++ {
+		span = span.Span(trm.entries[i].Range)
+	}
+	
+	return span, true
 }
 
 // AsMapOfRanges returns a view of this range map as a map from ranges to values
@@ -239,8 +251,151 @@ func (trm *TreeRangeMap[K, V]) removeOverlapping(rangeKey Range[K]) {
 	trm.entries = newEntries
 }
 
+// Helper method to split a range by removing the overlapping part
+func (trm *TreeRangeMap[K, V]) splitRange(original Range[K], toRemove Range[K]) []Range[K] {
+	var result []Range[K]
+	
+	// If ranges don't overlap, return original
+	if !original.IsConnected(toRemove) {
+		return []Range[K]{original}
+	}
+	
+	// If toRemove completely contains original, return empty
+	if toRemove.ContainsRange(original) {
+		return []Range[K]{}
+	}
+	
+	// Get bounds of both ranges
+	origLower, origLowerType, hasOrigLower := original.LowerBound()
+	origUpper, origUpperType, hasOrigUpper := original.UpperBound()
+	removeLower, removeLowerType, hasRemoveLower := toRemove.LowerBound()
+	removeUpper, removeUpperType, hasRemoveUpper := toRemove.UpperBound()
+	
+	// Create left part (before the removal range)
+	if hasOrigLower && hasRemoveLower {
+		cmp := trm.comparator(origLower, removeLower)
+		if cmp < 0 || (cmp == 0 && origLowerType == Closed && removeLowerType == Open) {
+			// There's a left part
+			var leftUpper K
+			var leftUpperType BoundType
+			
+			if removeLowerType == Closed {
+				leftUpper = removeLower
+				leftUpperType = Open
+			} else {
+				leftUpper = removeLower
+				leftUpperType = Closed
+			}
+			
+			leftRange := NewRangeWithComparator(origLower, origLowerType, leftUpper, leftUpperType, trm.comparator)
+			if !leftRange.IsEmpty() {
+				result = append(result, leftRange)
+			}
+		}
+	}
+	
+	// Create right part (after the removal range)
+	if hasOrigUpper && hasRemoveUpper {
+		cmp := trm.comparator(removeUpper, origUpper)
+		if cmp < 0 || (cmp == 0 && removeUpperType == Open && origUpperType == Closed) {
+			// There's a right part
+			var rightLower K
+			var rightLowerType BoundType
+			
+			if removeUpperType == Closed {
+				rightLower = removeUpper
+				rightLowerType = Open
+			} else {
+				rightLower = removeUpper
+				rightLowerType = Closed
+			}
+			
+			rightRange := NewRangeWithComparator(rightLower, rightLowerType, origUpper, origUpperType, trm.comparator)
+			if !rightRange.IsEmpty() {
+				result = append(result, rightRange)
+			}
+		}
+	}
+	
+	return result
+}
+
+// Helper method to compare two ranges for sorting
+func (trm *TreeRangeMap[K, V]) compareRanges(a, b Range[K]) int {
+	// Compare by lower bound first
+	aLower, aLowerType, hasALower := a.LowerBound()
+	bLower, bLowerType, hasBLower := b.LowerBound()
+	
+	if !hasALower && !hasBLower {
+		// Both unbounded below, compare upper bounds
+		aUpper, aUpperType, hasAUpper := a.UpperBound()
+		bUpper, bUpperType, hasBUpper := b.UpperBound()
+		
+		if !hasAUpper && !hasBUpper {
+			return 0 // Both are (-∞, +∞)
+		} else if !hasAUpper {
+			return 1 // a is (-∞, +∞), b is bounded above
+		} else if !hasBUpper {
+			return -1 // a is bounded above, b is (-∞, +∞)
+		} else {
+			cmp := trm.comparator(aUpper, bUpper)
+			if cmp != 0 {
+				return cmp
+			}
+			// Same upper bound, compare types (Closed < Open)
+			if aUpperType == Closed && bUpperType == Open {
+				return -1
+			} else if aUpperType == Open && bUpperType == Closed {
+				return 1
+			}
+			return 0
+		}
+	} else if !hasALower {
+		return -1 // a is unbounded below, b is bounded
+	} else if !hasBLower {
+		return 1 // a is bounded below, b is unbounded
+	} else {
+		// Both have lower bounds
+		cmp := trm.comparator(aLower, bLower)
+		if cmp != 0 {
+			return cmp
+		}
+		// Same lower bound, compare types (Closed < Open)
+		if aLowerType == Closed && bLowerType == Open {
+			return -1
+		} else if aLowerType == Open && bLowerType == Closed {
+			return 1
+		}
+		
+		// Lower bounds are identical, compare upper bounds
+		aUpper, aUpperType, hasAUpper := a.UpperBound()
+		bUpper, bUpperType, hasBUpper := b.UpperBound()
+		
+		if !hasAUpper && !hasBUpper {
+			return 0 // Both are [x, +∞)
+		} else if !hasAUpper {
+			return 1 // a is [x, +∞), b is [x, y]
+		} else if !hasBUpper {
+			return -1 // a is [x, y], b is [x, +∞)
+		} else {
+			cmp := trm.comparator(aUpper, bUpper)
+			if cmp != 0 {
+				return cmp
+			}
+			// Same upper bound, compare types (Open < Closed)
+			if aUpperType == Open && bUpperType == Closed {
+				return -1
+			} else if aUpperType == Closed && bUpperType == Open {
+				return 1
+			}
+			return 0
+		}
+	}
+}
+
 // Helper method to sort entries by range
 func (trm *TreeRangeMap[K, V]) sortEntries() {
-	// TODO: Implement proper sorting when Range interface has LowerEndpoint method
-	// For now, entries are kept in insertion order
+	sort.Slice(trm.entries, func(i, j int) bool {
+		return trm.compareRanges(trm.entries[i].Range, trm.entries[j].Range) < 0
+	})
 }

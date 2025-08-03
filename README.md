@@ -1,6 +1,6 @@
 # Go Collections Library
 
-A comprehensive Go-based collection library that provides common collection types and utilities found in Java SDK but missing from Go's standard library. This library follows Go language conventions and idioms, providing rich collection operation functionality for Go developers.
+This library follows Go language conventions and idioms, providing rich collection operation functionality for Go developers.
 
 ## Table of Contents
 
