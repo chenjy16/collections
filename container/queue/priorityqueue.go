@@ -2,18 +2,10 @@
 package queue
 
 import (
-	"errors"
 	"fmt"
 	"strings"
-
 	"github.com/chenjianyu/collections/container/common"
 )
-
-// ErrEmptyQueue indicates the queue is empty error
-var ErrEmptyQueue = errors.New("queue is empty")
-
-// ErrFullQueue indicates the queue is full error
-var ErrFullQueue = errors.New("queue is full")
 
 // PriorityQueue is a priority queue implementation based on binary heap
 // Default is min heap, can create max heap by providing custom comparator
@@ -143,7 +135,7 @@ func (pq *PriorityQueue[E]) String() string {
 // Add adds an element to the queue
 func (pq *PriorityQueue[E]) Add(element E) error {
 	if pq.isFull() {
-		return ErrFullQueue
+		return common.FullContainerError("PriorityQueue", pq.maxCap)
 	}
 
 	pq.heap = append(pq.heap, element)
@@ -166,7 +158,7 @@ func (pq *PriorityQueue[E]) Offer(element E) bool {
 func (pq *PriorityQueue[E]) Remove() (E, error) {
 	if pq.IsEmpty() {
 		var zero E
-		return zero, ErrEmptyQueue
+		return zero, common.EmptyContainerError("PriorityQueue")
 	}
 
 	root := pq.heap[0]
@@ -191,7 +183,7 @@ func (pq *PriorityQueue[E]) Poll() (E, bool) {
 func (pq *PriorityQueue[E]) Element() (E, error) {
 	if pq.IsEmpty() {
 		var zero E
-		return zero, ErrEmptyQueue
+		return zero, common.EmptyContainerError("PriorityQueue")
 	}
 	return pq.heap[0], nil
 }

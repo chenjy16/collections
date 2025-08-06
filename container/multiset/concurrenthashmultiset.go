@@ -97,12 +97,12 @@ func (ms *ConcurrentHashMultiset[E]) Add(element E) int {
 }
 
 // AddCount adds the specified number of occurrences of the element
-func (ms *ConcurrentHashMultiset[E]) AddCount(element E, count int) int {
+func (ms *ConcurrentHashMultiset[E]) AddCount(element E, count int) (int, error) {
 	if count < 0 {
-		panic("count cannot be negative")
+		return 0, common.NegativeCountError(count)
 	}
 	if count == 0 {
-		return ms.Count(element)
+		return ms.Count(element), nil
 	}
 	
 	seg := ms.getSegment(element)
@@ -112,7 +112,7 @@ func (ms *ConcurrentHashMultiset[E]) AddCount(element E, count int) int {
 	prevCount := seg.counts[element]
 	seg.counts[element] = prevCount + count
 	atomic.AddInt64(&ms.size, int64(count))
-	return prevCount
+	return prevCount, nil
 }
 
 // Remove removes one occurrence of the specified element
@@ -134,12 +134,12 @@ func (ms *ConcurrentHashMultiset[E]) Remove(element E) int {
 }
 
 // RemoveCount removes the specified number of occurrences of the element
-func (ms *ConcurrentHashMultiset[E]) RemoveCount(element E, count int) int {
+func (ms *ConcurrentHashMultiset[E]) RemoveCount(element E, count int) (int, error) {
 	if count < 0 {
-		panic("count cannot be negative")
+		return 0, common.NegativeCountError(count)
 	}
 	if count == 0 {
-		return ms.Count(element)
+		return ms.Count(element), nil
 	}
 	
 	seg := ms.getSegment(element)
@@ -161,7 +161,7 @@ func (ms *ConcurrentHashMultiset[E]) RemoveCount(element E, count int) int {
 		}
 		atomic.AddInt64(&ms.size, -int64(removeCount))
 	}
-	return prevCount
+	return prevCount, nil
 }
 
 // RemoveAll removes all occurrences of the specified element
@@ -187,9 +187,9 @@ func (ms *ConcurrentHashMultiset[E]) Count(element E) int {
 }
 
 // SetCount sets the count of the specified element to the given value
-func (ms *ConcurrentHashMultiset[E]) SetCount(element E, count int) int {
+func (ms *ConcurrentHashMultiset[E]) SetCount(element E, count int) (int, error) {
 	if count < 0 {
-		panic("count cannot be negative")
+		return 0, common.NegativeCountError(count)
 	}
 	
 	seg := ms.getSegment(element)
@@ -208,7 +208,7 @@ func (ms *ConcurrentHashMultiset[E]) SetCount(element E, count int) int {
 		atomic.AddInt64(&ms.size, int64(count-prevCount))
 	}
 	
-	return prevCount
+	return prevCount, nil
 }
 
 // Contains checks if the multiset contains the specified element

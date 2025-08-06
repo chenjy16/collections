@@ -77,19 +77,19 @@ func (ms *ImmutableMultiset[E]) Add(element E) int {
 }
 
 // AddCount returns a new ImmutableMultiset with the specified count of elements added
-func (ms *ImmutableMultiset[E]) AddCount(element E, count int) int {
+func (ms *ImmutableMultiset[E]) AddCount(element E, count int) (int, error) {
 	if count < 0 {
-		panic("count cannot be negative")
+		return 0, common.NegativeCountError(count)
 	}
 	if count == 0 {
-		return ms.Count(element)
+		return ms.Count(element), nil
 	}
 	
 	newCounts := ms.copyMap()
 	prevCount := newCounts[element]
 	newCounts[element] = prevCount + count
 	
-	return prevCount
+	return prevCount, nil
 }
 
 // WithAdd returns a new ImmutableMultiset with one occurrence of the element added
@@ -104,12 +104,12 @@ func (ms *ImmutableMultiset[E]) WithAdd(element E) *ImmutableMultiset[E] {
 }
 
 // WithAddCount returns a new ImmutableMultiset with the specified count of elements added
-func (ms *ImmutableMultiset[E]) WithAddCount(element E, count int) *ImmutableMultiset[E] {
+func (ms *ImmutableMultiset[E]) WithAddCount(element E, count int) (*ImmutableMultiset[E], error) {
 	if count < 0 {
-		panic("count cannot be negative")
+		return nil, common.NegativeCountError(count)
 	}
 	if count == 0 {
-		return ms
+		return ms, nil
 	}
 	
 	newCounts := ms.copyMap()
@@ -118,7 +118,7 @@ func (ms *ImmutableMultiset[E]) WithAddCount(element E, count int) *ImmutableMul
 	return &ImmutableMultiset[E]{
 		counts: newCounts,
 		size:   ms.size + count,
-	}
+	}, nil
 }
 
 // Remove returns the previous count (but doesn't actually modify this immutable instance)
@@ -127,11 +127,11 @@ func (ms *ImmutableMultiset[E]) Remove(element E) int {
 }
 
 // RemoveCount returns the previous count (but doesn't actually modify this immutable instance)
-func (ms *ImmutableMultiset[E]) RemoveCount(element E, count int) int {
+func (ms *ImmutableMultiset[E]) RemoveCount(element E, count int) (int, error) {
 	if count < 0 {
-		panic("count cannot be negative")
+		return 0, common.NegativeCountError(count)
 	}
-	return ms.counts[element]
+	return ms.counts[element], nil
 }
 
 // RemoveAll returns the previous count (but doesn't actually modify this immutable instance)
@@ -160,17 +160,17 @@ func (ms *ImmutableMultiset[E]) WithRemove(element E) *ImmutableMultiset[E] {
 }
 
 // WithRemoveCount returns a new ImmutableMultiset with the specified count of elements removed
-func (ms *ImmutableMultiset[E]) WithRemoveCount(element E, count int) *ImmutableMultiset[E] {
+func (ms *ImmutableMultiset[E]) WithRemoveCount(element E, count int) (*ImmutableMultiset[E], error) {
 	if count < 0 {
-		panic("count cannot be negative")
+		return nil, common.NegativeCountError(count)
 	}
 	if count == 0 {
-		return ms
+		return ms, nil
 	}
 	
 	currentCount := ms.counts[element]
 	if currentCount == 0 {
-		return ms
+		return ms, nil
 	}
 	
 	removeCount := count
@@ -189,7 +189,7 @@ func (ms *ImmutableMultiset[E]) WithRemoveCount(element E, count int) *Immutable
 	return &ImmutableMultiset[E]{
 		counts: newCounts,
 		size:   ms.size - removeCount,
-	}
+	}, nil
 }
 
 // WithRemoveAll returns a new ImmutableMultiset with all occurrences of the element removed
@@ -214,22 +214,22 @@ func (ms *ImmutableMultiset[E]) Count(element E) int {
 }
 
 // SetCount returns the previous count (but doesn't actually modify this immutable instance)
-func (ms *ImmutableMultiset[E]) SetCount(element E, count int) int {
+func (ms *ImmutableMultiset[E]) SetCount(element E, count int) (int, error) {
 	if count < 0 {
-		panic("count cannot be negative")
+		return 0, common.NegativeCountError(count)
 	}
-	return ms.counts[element]
+	return ms.counts[element], nil
 }
 
 // WithSetCount returns a new ImmutableMultiset with the element count set to the specified value
-func (ms *ImmutableMultiset[E]) WithSetCount(element E, count int) *ImmutableMultiset[E] {
+func (ms *ImmutableMultiset[E]) WithSetCount(element E, count int) (*ImmutableMultiset[E], error) {
 	if count < 0 {
-		panic("count cannot be negative")
+		return nil, common.NegativeCountError(count)
 	}
 	
 	currentCount := ms.counts[element]
 	if currentCount == count {
-		return ms
+		return ms, nil
 	}
 	
 	newCounts := ms.copyMap()
@@ -244,7 +244,7 @@ func (ms *ImmutableMultiset[E]) WithSetCount(element E, count int) *ImmutableMul
 	return &ImmutableMultiset[E]{
 		counts: newCounts,
 		size:   ms.size + sizeDiff,
-	}
+	}, nil
 }
 
 // Contains checks if the multiset contains the specified element

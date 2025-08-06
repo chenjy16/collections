@@ -2,6 +2,7 @@
 package queue
 
 import (
+	"github.com/chenjianyu/collections/container/common"
 	"github.com/chenjianyu/collections/container/list"
 )
 
@@ -74,7 +75,7 @@ func (ll *LinkedList[E]) String() string {
 // Add adds an element to the tail of the queue
 func (ll *LinkedList[E]) Add(element E) error {
 	if ll.isFull() {
-		return ErrFullQueue
+		return common.FullContainerError("LinkedListQueue", ll.maxCap)
 	}
 	ll.list.Add(element)
 	return nil
@@ -93,12 +94,12 @@ func (ll *LinkedList[E]) Offer(element E) bool {
 func (ll *LinkedList[E]) Remove() (E, error) {
 	if ll.IsEmpty() {
 		var zero E
-		return zero, ErrEmptyQueue
+		return zero, common.EmptyContainerError("LinkedListQueue")
 	}
 	val, success := ll.list.RemoveFirst()
 	if !success {
 		var zero E
-		return zero, ErrEmptyQueue
+		return zero, common.EmptyContainerError("LinkedListQueue")
 	}
 	return val, nil
 }
@@ -123,7 +124,7 @@ func (ll *LinkedList[E]) Peek() (E, bool) {
 // AddFirst adds an element to the head of the queue
 func (ll *LinkedList[E]) AddFirst(element E) error {
 	if ll.isFull() {
-		return ErrFullQueue
+		return common.FullContainerError("LinkedListQueue", ll.maxCap)
 	}
 	ll.list.AddFirst(element)
 	return nil
@@ -132,7 +133,7 @@ func (ll *LinkedList[E]) AddFirst(element E) error {
 // AddLast adds an element to the tail of the queue
 func (ll *LinkedList[E]) AddLast(element E) error {
 	if ll.isFull() {
-		return ErrFullQueue
+		return common.FullContainerError("LinkedListQueue", ll.maxCap)
 	}
 	ll.list.AddLast(element)
 	return nil
@@ -160,12 +161,12 @@ func (ll *LinkedList[E]) OfferLast(element E) bool {
 func (ll *LinkedList[E]) RemoveFirst() (E, error) {
 	if ll.IsEmpty() {
 		var zero E
-		return zero, ErrEmptyQueue
+		return zero, common.EmptyContainerError("LinkedListQueue")
 	}
 	val, success := ll.list.RemoveFirst()
 	if !success {
 		var zero E
-		return zero, ErrEmptyQueue
+		return zero, common.EmptyContainerError("LinkedListQueue")
 	}
 	return val, nil
 }
@@ -174,12 +175,12 @@ func (ll *LinkedList[E]) RemoveFirst() (E, error) {
 func (ll *LinkedList[E]) RemoveLast() (E, error) {
 	if ll.IsEmpty() {
 		var zero E
-		return zero, ErrEmptyQueue
+		return zero, common.EmptyContainerError("LinkedListQueue")
 	}
 	val, success := ll.list.RemoveLast()
 	if !success {
 		var zero E
-		return zero, ErrEmptyQueue
+		return zero, common.EmptyContainerError("LinkedListQueue")
 	}
 	return val, nil
 }
@@ -200,7 +201,7 @@ func (ll *LinkedList[E]) PollLast() (E, bool) {
 func (ll *LinkedList[E]) GetFirst() (E, error) {
 	if ll.IsEmpty() {
 		var zero E
-		return zero, ErrEmptyQueue
+		return zero, common.EmptyContainerError("LinkedListQueue")
 	}
 	return ll.list.GetFirst()
 }
@@ -209,7 +210,7 @@ func (ll *LinkedList[E]) GetFirst() (E, error) {
 func (ll *LinkedList[E]) GetLast() (E, error) {
 	if ll.IsEmpty() {
 		var zero E
-		return zero, ErrEmptyQueue
+		return zero, common.EmptyContainerError("LinkedListQueue")
 	}
 	return ll.list.GetLast()
 }

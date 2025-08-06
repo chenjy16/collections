@@ -262,10 +262,10 @@ func TestImmutableMultimap(t *testing.T) {
 	assert.Contains(t, values, 1)
 	assert.Contains(t, values, 2)
 
-	// Test immutability
-	assert.Panics(t, func() { immutable.Put("key3", 4) })
-	assert.Panics(t, func() { immutable.Remove("key1", 1) })
-	assert.Panics(t, func() { immutable.Clear() })
+	// Test immutability - operations should return false/nil instead of panicking
+	assert.False(t, immutable.Put("key3", 4))
+	assert.False(t, immutable.Remove("key1", 1))
+	immutable.Clear() // Should log warning but not panic
 
 	// Test Of constructor
 	immutable2 := Of[string, int]("key1", 1, "key1", 2, "key2", 3)
@@ -300,10 +300,10 @@ func TestImmutableListMultimap(t *testing.T) {
 	assert.Equal(t, 1, values[1])
 	assert.Equal(t, 2, values[2])
 
-	// Test immutability
-	assert.Panics(t, func() { immutable.Put("key3", 4) })
-	assert.Panics(t, func() { immutable.Remove("key1", 1) })
-	assert.Panics(t, func() { immutable.Clear() })
+	// Test immutability - operations should return false/nil instead of panicking
+	assert.False(t, immutable.Put("key3", 4))
+	assert.False(t, immutable.Remove("key1", 1))
+	immutable.Clear() // Should log warning but not panic
 
 	// Test ListOf constructor
 	immutable2 := ListOf[string, int]("key1", 1, "key1", 1, "key1", 2, "key2", 3)
@@ -339,10 +339,10 @@ func TestImmutableSetMultimap(t *testing.T) {
 	assert.Contains(t, values, 1)
 	assert.Contains(t, values, 2)
 
-	// Test immutability
-	assert.Panics(t, func() { immutable.Put("key3", 4) })
-	assert.Panics(t, func() { immutable.Remove("key1", 1) })
-	assert.Panics(t, func() { immutable.Clear() })
+	// Test immutability - operations should return false/nil instead of panicking
+	assert.False(t, immutable.Put("key3", 4))
+	assert.False(t, immutable.Remove("key1", 1))
+	immutable.Clear() // Should log warning but not panic
 
 	// Test SetOf constructor
 	immutable2 := SetOf[string, int]("key1", 1, "key1", 1, "key1", 2, "key2", 3)

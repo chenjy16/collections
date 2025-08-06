@@ -2,15 +2,11 @@
 package list
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/chenjianyu/collections/container/common"
 )
-
-// ErrEmptyList indicates that the list is empty
-var ErrEmptyList = errors.New("list is empty")
 
 // Node is a node in the doubly linked list
 type Node[E any] struct {
@@ -102,7 +98,7 @@ func (list *LinkedList[E]) Add(element E) bool {
 // Insert inserts an element at the specified position
 func (list *LinkedList[E]) Insert(index int, element E) error {
 	if index < 0 || index > list.size {
-		return ErrIndexOutOfBounds
+		return common.IndexOutOfBoundsError(index, list.size)
 	}
 
 	if index == 0 {
@@ -130,7 +126,7 @@ func (list *LinkedList[E]) Insert(index int, element E) error {
 // Get retrieves the element at the specified index
 func (list *LinkedList[E]) Get(index int) (E, error) {
 	if index < 0 || index >= list.size {
-		return *new(E), ErrIndexOutOfBounds
+		return *new(E), common.IndexOutOfBoundsError(index, list.size)
 	}
 
 	node := list.getNodeAt(index)
@@ -229,7 +225,7 @@ func (list *LinkedList[E]) LastIndexOf(element E) int {
 // SubList returns a view of the specified range in the list
 func (list *LinkedList[E]) SubList(fromIndex, toIndex int) (List[E], error) {
 	if fromIndex < 0 || toIndex > list.size || fromIndex > toIndex {
-		return nil, ErrInvalidRange
+		return nil, common.InvalidRangeError(fromIndex, toIndex)
 	}
 
 	subList := NewLinkedList[E]()
@@ -329,7 +325,7 @@ func (list *LinkedList[E]) RemoveLast() (E, bool) {
 // GetFirst returns the first element of the list without removing it
 func (list *LinkedList[E]) GetFirst() (E, error) {
 	if list.head == nil {
-		return *new(E), ErrEmptyList
+		return *new(E), common.EmptyContainerError("LinkedList")
 	}
 	return list.head.data, nil
 }
@@ -337,7 +333,7 @@ func (list *LinkedList[E]) GetFirst() (E, error) {
 // GetLast returns the last element of the list without removing it
 func (list *LinkedList[E]) GetLast() (E, error) {
 	if list.tail == nil {
-		return *new(E), ErrEmptyList
+		return *new(E), common.EmptyContainerError("LinkedList")
 	}
 	return list.tail.data, nil
 }

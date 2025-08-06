@@ -2,16 +2,10 @@
 package stack
 
 import (
-	"errors"
 	"fmt"
 	"strings"
+	"github.com/chenjianyu/collections/container/common"
 )
-
-// ErrEmptyStack indicates that the stack is empty
-var ErrEmptyStack = errors.New("stack is empty")
-
-// ErrFullStack indicates that the stack is full
-var ErrFullStack = errors.New("stack is full")
 
 // ArrayStack is a stack implementation based on slices
 type ArrayStack[E any] struct {
@@ -105,7 +99,7 @@ func (s *ArrayStack[E]) String() string {
 // Push pushes an element onto the top of the stack
 func (s *ArrayStack[E]) Push(element E) error {
 	if s.isFull() {
-		return ErrFullStack
+		return common.FullContainerError("ArrayStack", s.maxCap)
 	}
 	s.elements = append(s.elements, element)
 	return nil
@@ -115,7 +109,7 @@ func (s *ArrayStack[E]) Push(element E) error {
 func (s *ArrayStack[E]) Pop() (E, error) {
 	if s.IsEmpty() {
 		var zero E
-		return zero, ErrEmptyStack
+		return zero, common.EmptyContainerError("ArrayStack")
 	}
 
 	index := len(s.elements) - 1
@@ -128,7 +122,7 @@ func (s *ArrayStack[E]) Pop() (E, error) {
 func (s *ArrayStack[E]) Peek() (E, error) {
 	if s.IsEmpty() {
 		var zero E
-		return zero, ErrEmptyStack
+		return zero, common.EmptyContainerError("ArrayStack")
 	}
 	return s.elements[len(s.elements)-1], nil
 }

@@ -2,6 +2,8 @@ package ranges
 
 import (
 	"strings"
+	"log"
+	"github.com/chenjianyu/collections/container/common"
 )
 
 // ImmutableRangeSet is an immutable implementation of RangeSet
@@ -52,8 +54,10 @@ func (irs *ImmutableRangeSet[T]) IsEmpty() bool {
 }
 
 // Clear returns a new empty ImmutableRangeSet (immutable operation)
+// Clear logs an error and returns as ImmutableRangeSet is immutable
 func (irs *ImmutableRangeSet[T]) Clear() {
-	panic("ImmutableRangeSet is immutable - use WithClear() instead")
+	err := common.ImmutableOperationError("Clear", "WithClear()")
+	log.Printf("Warning: %v", err)
 }
 
 // WithClear returns a new empty ImmutableRangeSet
@@ -74,9 +78,11 @@ func (irs *ImmutableRangeSet[T]) String() string {
 	return "{" + strings.Join(parts, ", ") + "}"
 }
 
-// Add panics as ImmutableRangeSet is immutable
+// Add returns an error as ImmutableRangeSet is immutable
+// Add logs an error and returns as ImmutableRangeSet is immutable
 func (irs *ImmutableRangeSet[T]) Add(rangeToAdd Range[T]) {
-	panic("ImmutableRangeSet is immutable - use WithAdd() instead")
+	err := common.ImmutableOperationError("Add", "WithAdd()")
+	log.Printf("Warning: %v", err)
 }
 
 // WithAdd returns a new ImmutableRangeSet with the range added
@@ -98,9 +104,11 @@ func (irs *ImmutableRangeSet[T]) WithAdd(rangeToAdd Range[T]) RangeSet[T] {
 	}
 }
 
-// AddRange panics as ImmutableRangeSet is immutable
+// AddRange returns an error as ImmutableRangeSet is immutable
+// AddRange logs an error and returns as ImmutableRangeSet is immutable
 func (irs *ImmutableRangeSet[T]) AddRange(lower T, lowerType BoundType, upper T, upperType BoundType) {
-	panic("ImmutableRangeSet is immutable - use WithAddRange() instead")
+	err := common.ImmutableOperationError("AddRange", "WithAddRange()")
+	log.Printf("Warning: %v", err)
 }
 
 // WithAddRange returns a new ImmutableRangeSet with the range added
@@ -109,9 +117,11 @@ func (irs *ImmutableRangeSet[T]) WithAddRange(lower T, lowerType BoundType, uppe
 	return irs.WithAdd(rangeToAdd)
 }
 
-// Remove panics as ImmutableRangeSet is immutable
+// Remove returns an error as ImmutableRangeSet is immutable
+// Remove logs an error and returns as ImmutableRangeSet is immutable
 func (irs *ImmutableRangeSet[T]) Remove(rangeToRemove Range[T]) {
-	panic("ImmutableRangeSet is immutable - use WithRemove() instead")
+	err := common.ImmutableOperationError("Remove", "WithRemove()")
+	log.Printf("Warning: %v", err)
 }
 
 // WithRemove returns a new ImmutableRangeSet with the range removed
@@ -133,9 +143,11 @@ func (irs *ImmutableRangeSet[T]) WithRemove(rangeToRemove Range[T]) RangeSet[T] 
 	}
 }
 
-// RemoveRange panics as ImmutableRangeSet is immutable
+// RemoveRange returns an error as ImmutableRangeSet is immutable
+// RemoveRange logs an error and returns as ImmutableRangeSet is immutable
 func (irs *ImmutableRangeSet[T]) RemoveRange(lower T, lowerType BoundType, upper T, upperType BoundType) {
-	panic("ImmutableRangeSet is immutable - use WithRemoveRange() instead")
+	err := common.ImmutableOperationError("RemoveRange", "WithRemoveRange()")
+	log.Printf("Warning: %v", err)
 }
 
 // WithRemoveRange returns a new ImmutableRangeSet with the range removed

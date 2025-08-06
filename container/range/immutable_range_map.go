@@ -2,6 +2,8 @@ package ranges
 
 import (
 	"strings"
+	"log"
+	"github.com/chenjianyu/collections/container/common"
 )
 
 // ImmutableRangeMap is an immutable implementation of RangeMap
@@ -60,9 +62,10 @@ func (irm *ImmutableRangeMap[K, V]) IsEmpty() bool {
 	return len(irm.entries) == 0
 }
 
-// Clear panics as ImmutableRangeMap is immutable
+// Clear logs an error and returns as ImmutableRangeMap is immutable
 func (irm *ImmutableRangeMap[K, V]) Clear() {
-	panic("ImmutableRangeMap is immutable - use WithClear() instead")
+	err := common.ImmutableOperationError("Clear", "WithClear()")
+	log.Printf("Warning: %v", err)
 }
 
 // WithClear returns a new empty ImmutableRangeMap
@@ -108,9 +111,10 @@ func (irm *ImmutableRangeMap[K, V]) GetEntry(key K) (Range[K], V, bool) {
 	return zeroR, zeroV, false
 }
 
-// Put panics as ImmutableRangeMap is immutable
+// Put logs an error and returns as ImmutableRangeMap is immutable
 func (irm *ImmutableRangeMap[K, V]) Put(rangeKey Range[K], value V) {
-	panic("ImmutableRangeMap is immutable - use WithPut() instead")
+	err := common.ImmutableOperationError("Put", "WithPut()")
+	log.Printf("Warning: %v", err)
 }
 
 // WithPut returns a new ImmutableRangeMap with the range-value mapping added
@@ -132,9 +136,10 @@ func (irm *ImmutableRangeMap[K, V]) WithPut(rangeKey Range[K], value V) RangeMap
 	}
 }
 
-// PutRange panics as ImmutableRangeMap is immutable
+// PutRange logs an error and returns as ImmutableRangeMap is immutable
 func (irm *ImmutableRangeMap[K, V]) PutRange(lower K, lowerType BoundType, upper K, upperType BoundType, value V) {
-	panic("ImmutableRangeMap is immutable - use WithPutRange() instead")
+	err := common.ImmutableOperationError("PutRange", "WithPutRange()")
+	log.Printf("Warning: %v", err)
 }
 
 // WithPutRange returns a new ImmutableRangeMap with the range-value mapping added
@@ -143,9 +148,10 @@ func (irm *ImmutableRangeMap[K, V]) WithPutRange(lower K, lowerType BoundType, u
 	return irm.WithPut(rangeKey, value)
 }
 
-// Remove panics as ImmutableRangeMap is immutable
+// Remove logs an error and returns as ImmutableRangeMap is immutable
 func (irm *ImmutableRangeMap[K, V]) Remove(rangeToRemove Range[K]) {
-	panic("ImmutableRangeMap is immutable - use WithRemove() instead")
+	err := common.ImmutableOperationError("Remove", "WithRemove()")
+	log.Printf("Warning: %v", err)
 }
 
 // WithRemove returns a new ImmutableRangeMap with the range removed
@@ -167,9 +173,10 @@ func (irm *ImmutableRangeMap[K, V]) WithRemove(rangeToRemove Range[K]) RangeMap[
 	}
 }
 
-// RemoveRange panics as ImmutableRangeMap is immutable
+// RemoveRange logs an error and returns as ImmutableRangeMap is immutable
 func (irm *ImmutableRangeMap[K, V]) RemoveRange(lower K, lowerType BoundType, upper K, upperType BoundType) {
-	panic("ImmutableRangeMap is immutable - use WithRemoveRange() instead")
+	err := common.ImmutableOperationError("RemoveRange", "WithRemoveRange()")
+	log.Printf("Warning: %v", err)
 }
 
 // WithRemoveRange returns a new ImmutableRangeMap with the range removed

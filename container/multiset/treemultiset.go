@@ -112,12 +112,12 @@ func (ms *TreeMultiset[E]) addNode(node *treeNode[E], element E) (*treeNode[E], 
 }
 
 // AddCount adds the specified number of occurrences of the element
-func (ms *TreeMultiset[E]) AddCount(element E, count int) int {
+func (ms *TreeMultiset[E]) AddCount(element E, count int) (int, error) {
 	if count < 0 {
-		panic("count cannot be negative")
+		return 0, common.NegativeCountError(count)
 	}
 	if count == 0 {
-		return ms.Count(element)
+		return ms.Count(element), nil
 	}
 	
 	ms.mu.Lock()
@@ -126,7 +126,7 @@ func (ms *TreeMultiset[E]) AddCount(element E, count int) int {
 	prevCount := 0
 	ms.root, prevCount = ms.addCountNode(ms.root, element, count)
 	ms.size += count
-	return prevCount
+	return prevCount, nil
 }
 
 func (ms *TreeMultiset[E]) addCountNode(node *treeNode[E], element E, count int) (*treeNode[E], int) {
@@ -192,12 +192,12 @@ func (ms *TreeMultiset[E]) removeNode(node *treeNode[E], element E, count int) (
 }
 
 // RemoveCount removes the specified number of occurrences of the element
-func (ms *TreeMultiset[E]) RemoveCount(element E, count int) int {
+func (ms *TreeMultiset[E]) RemoveCount(element E, count int) (int, error) {
 	if count < 0 {
-		panic("count cannot be negative")
+		return 0, common.NegativeCountError(count)
 	}
 	if count == 0 {
-		return ms.Count(element)
+		return ms.Count(element), nil
 	}
 	
 	ms.mu.Lock()
@@ -207,7 +207,7 @@ func (ms *TreeMultiset[E]) RemoveCount(element E, count int) int {
 	actualRemoved := 0
 	ms.root, prevCount, actualRemoved = ms.removeCountNode(ms.root, element, count)
 	ms.size -= actualRemoved
-	return prevCount
+	return prevCount, nil
 }
 
 func (ms *TreeMultiset[E]) removeCountNode(node *treeNode[E], element E, count int) (*treeNode[E], int, int) {
@@ -329,9 +329,9 @@ func (ms *TreeMultiset[E]) findNode(node *treeNode[E], element E) *treeNode[E] {
 }
 
 // SetCount sets the count of the specified element to the given value
-func (ms *TreeMultiset[E]) SetCount(element E, count int) int {
+func (ms *TreeMultiset[E]) SetCount(element E, count int) (int, error) {
 	if count < 0 {
-		panic("count cannot be negative")
+		return 0, common.NegativeCountError(count)
 	}
 	
 	prevCount := ms.Count(element)
@@ -341,13 +341,19 @@ func (ms *TreeMultiset[E]) SetCount(element E, count int) int {
 	} else {
 		diff := count - prevCount
 		if diff > 0 {
-			ms.AddCount(element, diff)
+			_, err := ms.AddCount(element, diff)
+			if err != nil {
+				return prevCount, err
+			}
 		} else if diff < 0 {
-			ms.RemoveCount(element, -diff)
+			_, err := ms.RemoveCount(element, -diff)
+			if err != nil {
+				return prevCount, err
+			}
 		}
 	}
 	
-	return prevCount
+	return prevCount, nil
 }
 
 // Contains checks if the multiset contains the specified element

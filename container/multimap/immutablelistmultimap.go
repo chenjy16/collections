@@ -3,6 +3,8 @@ package multimap
 import (
 	"fmt"
 	"strings"
+	"log"
+	"github.com/chenjianyu/collections/container/common"
 )
 
 // ImmutableListMultimap is an immutable implementation of a multimap that preserves duplicate values and insertion order
@@ -29,7 +31,9 @@ func NewImmutableListMultimap[K comparable, V comparable](entries []Entry[K, V])
 // ListOf creates a new ImmutableListMultimap from the given key-value pairs
 func ListOf[K comparable, V comparable](pairs ...interface{}) *ImmutableListMultimap[K, V] {
 	if len(pairs)%2 != 0 {
-		panic("ImmutableListMultimap.ListOf requires an even number of arguments")
+		err := common.ImmutableOperationError("ListOf requires an even number of arguments", "provide key-value pairs")
+		log.Printf("Warning: %v", err)
+		return NewImmutableListMultimap([]Entry[K, V]{})
 	}
 	
 	entries := make([]Entry[K, V], 0, len(pairs)/2)
@@ -39,7 +43,9 @@ func ListOf[K comparable, V comparable](pairs ...interface{}) *ImmutableListMult
 		value, ok2 := pairs[i+1].(V)
 		
 		if !ok1 || !ok2 {
-			panic("ImmutableListMultimap.ListOf: invalid type for key or value")
+			err := common.ImmutableOperationError("invalid type for key or value", "ensure correct types")
+			log.Printf("Warning: %v", err)
+			return NewImmutableListMultimap([]Entry[K, V]{})
 		}
 		
 		entries = append(entries, Entry[K, V]{Key: key, Value: value})
@@ -58,29 +64,39 @@ func FromMultimapToList[K comparable, V comparable](multimap Multimap[K, V]) *Im
 	return NewImmutableListMultimap(multimap.Entries())
 }
 
-// Put is not supported for ImmutableListMultimap and will panic
+// Put logs an error and returns false as ImmutableListMultimap is immutable
 func (m *ImmutableListMultimap[K, V]) Put(key K, value V) bool {
-	panic("ImmutableListMultimap is immutable")
+	err := common.ImmutableOperationError("Put", "use builder pattern")
+	log.Printf("Warning: %v", err)
+	return false
 }
 
-// PutAll is not supported for ImmutableListMultimap and will panic
+// PutAll logs an error and returns false as ImmutableListMultimap is immutable
 func (m *ImmutableListMultimap[K, V]) PutAll(multimap Multimap[K, V]) bool {
-	panic("ImmutableListMultimap is immutable")
+	err := common.ImmutableOperationError("PutAll", "use builder pattern")
+	log.Printf("Warning: %v", err)
+	return false
 }
 
-// ReplaceValues is not supported for ImmutableListMultimap and will panic
+// ReplaceValues logs an error and returns nil as ImmutableListMultimap is immutable
 func (m *ImmutableListMultimap[K, V]) ReplaceValues(key K, values []V) []V {
-	panic("ImmutableListMultimap is immutable")
+	err := common.ImmutableOperationError("ReplaceValues", "use builder pattern")
+	log.Printf("Warning: %v", err)
+	return nil
 }
 
-// Remove is not supported for ImmutableListMultimap and will panic
+// Remove logs an error and returns false as ImmutableListMultimap is immutable
 func (m *ImmutableListMultimap[K, V]) Remove(key K, value V) bool {
-	panic("ImmutableListMultimap is immutable")
+	err := common.ImmutableOperationError("Remove", "use builder pattern")
+	log.Printf("Warning: %v", err)
+	return false
 }
 
-// RemoveAll is not supported for ImmutableListMultimap and will panic
+// RemoveAll logs an error and returns nil as ImmutableListMultimap is immutable
 func (m *ImmutableListMultimap[K, V]) RemoveAll(key K) []V {
-	panic("ImmutableListMultimap is immutable")
+	err := common.ImmutableOperationError("RemoveAll", "use builder pattern")
+	log.Printf("Warning: %v", err)
+	return nil
 }
 
 // ContainsKey returns true if this multimap contains at least one key-value mapping with the specified key
@@ -194,9 +210,10 @@ func (m *ImmutableListMultimap[K, V]) IsEmpty() bool {
 	return len(m.entries) == 0
 }
 
-// Clear is not supported for ImmutableListMultimap and will panic
+// Clear logs an error as ImmutableListMultimap is immutable
 func (m *ImmutableListMultimap[K, V]) Clear() {
-	panic("ImmutableListMultimap is immutable")
+	err := common.ImmutableOperationError("Clear", "create a new empty multimap")
+	log.Printf("Warning: %v", err)
 }
 
 // Contains returns true if this multimap contains the specified element

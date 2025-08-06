@@ -143,7 +143,7 @@ func TestImmutableMultiset(t *testing.T) {
 		t.Error("New multiset should contain added element")
 	}
 	
-	ms3 := ms2.WithAddCount("a", 2)
+	ms3, _ := ms2.WithAddCount("a", 2)
 	if ms2.Count("a") != 1 {
 		t.Error("Previous multiset should not be modified")
 	}
@@ -201,7 +201,7 @@ func testMultisetImplementation(t *testing.T, factory func() Multiset[string]) {
 	}
 	
 	// Test AddCount
-	prevCount = ms.AddCount("b", 3)
+	prevCount, _ = ms.AddCount("b", 3)
 	if prevCount != 0 {
 		t.Errorf("Expected previous count 0, got %d", prevCount)
 	}
@@ -238,7 +238,7 @@ func testMultisetImplementation(t *testing.T, factory func() Multiset[string]) {
 	}
 	
 	// Test RemoveCount
-	prevCount = ms.RemoveCount("b", 2)
+	prevCount, _ = ms.RemoveCount("b", 2)
 	if prevCount != 3 {
 		t.Errorf("Expected previous count 3, got %d", prevCount)
 	}
@@ -259,7 +259,7 @@ func testMultisetImplementation(t *testing.T, factory func() Multiset[string]) {
 	}
 	
 	// Test SetCount
-	prevCount = ms.SetCount("c", 5)
+	prevCount, _ = ms.SetCount("c", 5)
 	if prevCount != 0 {
 		t.Errorf("Expected previous count 0, got %d", prevCount)
 	}
@@ -268,7 +268,7 @@ func testMultisetImplementation(t *testing.T, factory func() Multiset[string]) {
 	}
 	
 	// Test SetCount to 0 (should remove element)
-	ms.SetCount("c", 0)
+	_, _ = ms.SetCount("c", 0)
 	if ms.Contains("c") {
 		t.Error("Multiset should not contain 'c' after setting count to 0")
 	}
@@ -393,33 +393,28 @@ func TestMultisetOperations(t *testing.T) {
 func TestMultisetErrorConditions(t *testing.T) {
 	ms := NewHashMultiset[string]()
 	
-	// Test negative count panics
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("AddCount with negative count should panic")
-		}
-	}()
-	ms.AddCount("a", -1)
-}
-
-func TestMultisetErrorConditions2(t *testing.T) {
-	ms := NewHashMultiset[string]()
+	// Test negative count returns error instead of panicking
+	count, err := ms.AddCount("a", -1)
+	if err == nil {
+		t.Error("AddCount with negative count should return error")
+	}
+	if count != 0 {
+		t.Errorf("AddCount with negative count should return 0, got %d", count)
+	}
 	
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("RemoveCount with negative count should panic")
-		}
-	}()
-	ms.RemoveCount("a", -1)
-}
-
-func TestMultisetErrorConditions3(t *testing.T) {
-	ms := NewHashMultiset[string]()
+	count, err = ms.RemoveCount("a", -1)
+	if err == nil {
+		t.Error("RemoveCount with negative count should return error")
+	}
+	if count != 0 {
+		t.Errorf("RemoveCount with negative count should return 0, got %d", count)
+	}
 	
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("SetCount with negative count should panic")
-		}
-	}()
-	ms.SetCount("a", -1)
+	count, err = ms.SetCount("a", -1)
+	if err == nil {
+		t.Error("SetCount with negative count should return error")
+	}
+	if count != 0 {
+		t.Errorf("SetCount with negative count should return 0, got %d", count)
+	}
 }

@@ -71,12 +71,12 @@ func (ms *LinkedHashMultiset[E]) Add(element E) int {
 }
 
 // AddCount adds the specified number of occurrences of the element
-func (ms *LinkedHashMultiset[E]) AddCount(element E, count int) int {
+func (ms *LinkedHashMultiset[E]) AddCount(element E, count int) (int, error) {
 	if count < 0 {
-		panic("count cannot be negative")
+		return 0, common.NegativeCountError(count)
 	}
 	if count == 0 {
-		return ms.Count(element)
+		return ms.Count(element), nil
 	}
 	
 	ms.mu.Lock()
@@ -86,7 +86,7 @@ func (ms *LinkedHashMultiset[E]) AddCount(element E, count int) int {
 		prevCount := entry.count
 		entry.count += count
 		ms.size += count
-		return prevCount
+		return prevCount, nil
 	}
 	
 	// Create new entry and add to end of list
@@ -97,7 +97,7 @@ func (ms *LinkedHashMultiset[E]) AddCount(element E, count int) int {
 	ms.counts[element] = entry
 	ms.addToTail(entry)
 	ms.size += count
-	return 0
+	return 0, nil
 }
 
 // Remove removes one occurrence of the specified element
@@ -123,12 +123,12 @@ func (ms *LinkedHashMultiset[E]) Remove(element E) int {
 }
 
 // RemoveCount removes the specified number of occurrences of the element
-func (ms *LinkedHashMultiset[E]) RemoveCount(element E, count int) int {
+func (ms *LinkedHashMultiset[E]) RemoveCount(element E, count int) (int, error) {
 	if count < 0 {
-		panic("count cannot be negative")
+		return 0, common.NegativeCountError(count)
 	}
 	if count == 0 {
-		return ms.Count(element)
+		return ms.Count(element), nil
 	}
 	
 	ms.mu.Lock()
@@ -136,7 +136,7 @@ func (ms *LinkedHashMultiset[E]) RemoveCount(element E, count int) int {
 	
 	entry, exists := ms.counts[element]
 	if !exists {
-		return 0
+		return 0, nil
 	}
 	
 	prevCount := entry.count
@@ -153,7 +153,7 @@ func (ms *LinkedHashMultiset[E]) RemoveCount(element E, count int) int {
 		delete(ms.counts, element)
 	}
 	
-	return prevCount
+	return prevCount, nil
 }
 
 // RemoveAll removes all occurrences of the specified element
@@ -186,9 +186,9 @@ func (ms *LinkedHashMultiset[E]) Count(element E) int {
 }
 
 // SetCount sets the count of the specified element to the given value
-func (ms *LinkedHashMultiset[E]) SetCount(element E, count int) int {
+func (ms *LinkedHashMultiset[E]) SetCount(element E, count int) (int, error) {
 	if count < 0 {
-		panic("count cannot be negative")
+		return 0, common.NegativeCountError(count)
 	}
 	
 	ms.mu.Lock()
@@ -220,7 +220,7 @@ func (ms *LinkedHashMultiset[E]) SetCount(element E, count int) int {
 		}
 	}
 	
-	return prevCount
+	return prevCount, nil
 }
 
 // Contains checks if the multiset contains the specified element

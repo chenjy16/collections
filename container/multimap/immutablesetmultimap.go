@@ -3,7 +3,8 @@ package multimap
 import (
 	"fmt"
 	"strings"
-
+	"log"
+	"github.com/chenjianyu/collections/container/common"
 	"github.com/chenjianyu/collections/container/set"
 )
 
@@ -48,7 +49,9 @@ func NewImmutableSetMultimap[K comparable, V comparable](entries []Entry[K, V]) 
 // SetOf creates a new ImmutableSetMultimap from the given key-value pairs
 func SetOf[K comparable, V comparable](pairs ...interface{}) *ImmutableSetMultimap[K, V] {
 	if len(pairs)%2 != 0 {
-		panic("ImmutableSetMultimap.SetOf requires an even number of arguments")
+		err := common.ImmutableOperationError("SetOf requires an even number of arguments", "provide key-value pairs")
+		log.Printf("Warning: %v", err)
+		return NewImmutableSetMultimap([]Entry[K, V]{})
 	}
 	
 	entries := make([]Entry[K, V], 0, len(pairs)/2)
@@ -58,7 +61,9 @@ func SetOf[K comparable, V comparable](pairs ...interface{}) *ImmutableSetMultim
 		value, ok2 := pairs[i+1].(V)
 		
 		if !ok1 || !ok2 {
-			panic("ImmutableSetMultimap.SetOf: invalid type for key or value")
+			err := common.ImmutableOperationError("invalid type for key or value", "ensure correct types")
+			log.Printf("Warning: %v", err)
+			return NewImmutableSetMultimap([]Entry[K, V]{})
 		}
 		
 		entries = append(entries, Entry[K, V]{Key: key, Value: value})
@@ -77,29 +82,39 @@ func FromMultimapToSet[K comparable, V comparable](multimap Multimap[K, V]) *Imm
 	return NewImmutableSetMultimap(multimap.Entries())
 }
 
-// Put is not supported for ImmutableSetMultimap and will panic
+// Put logs an error and returns false as ImmutableSetMultimap is immutable
 func (m *ImmutableSetMultimap[K, V]) Put(key K, value V) bool {
-	panic("ImmutableSetMultimap is immutable")
+	err := common.ImmutableOperationError("Put", "use builder pattern")
+	log.Printf("Warning: %v", err)
+	return false
 }
 
-// PutAll is not supported for ImmutableSetMultimap and will panic
+// PutAll logs an error and returns false as ImmutableSetMultimap is immutable
 func (m *ImmutableSetMultimap[K, V]) PutAll(multimap Multimap[K, V]) bool {
-	panic("ImmutableSetMultimap is immutable")
+	err := common.ImmutableOperationError("PutAll", "use builder pattern")
+	log.Printf("Warning: %v", err)
+	return false
 }
 
-// ReplaceValues is not supported for ImmutableSetMultimap and will panic
+// ReplaceValues logs an error and returns nil as ImmutableSetMultimap is immutable
 func (m *ImmutableSetMultimap[K, V]) ReplaceValues(key K, values []V) []V {
-	panic("ImmutableSetMultimap is immutable")
+	err := common.ImmutableOperationError("ReplaceValues", "use builder pattern")
+	log.Printf("Warning: %v", err)
+	return nil
 }
 
-// Remove is not supported for ImmutableSetMultimap and will panic
+// Remove logs an error and returns false as ImmutableSetMultimap is immutable
 func (m *ImmutableSetMultimap[K, V]) Remove(key K, value V) bool {
-	panic("ImmutableSetMultimap is immutable")
+	err := common.ImmutableOperationError("Remove", "use builder pattern")
+	log.Printf("Warning: %v", err)
+	return false
 }
 
-// RemoveAll is not supported for ImmutableSetMultimap and will panic
+// RemoveAll logs an error and returns nil as ImmutableSetMultimap is immutable
 func (m *ImmutableSetMultimap[K, V]) RemoveAll(key K) []V {
-	panic("ImmutableSetMultimap is immutable")
+	err := common.ImmutableOperationError("RemoveAll", "use builder pattern")
+	log.Printf("Warning: %v", err)
+	return nil
 }
 
 // ContainsKey returns true if this multimap contains at least one key-value mapping with the specified key
@@ -203,9 +218,10 @@ func (m *ImmutableSetMultimap[K, V]) IsEmpty() bool {
 	return len(m.entries) == 0
 }
 
-// Clear is not supported for ImmutableSetMultimap and will panic
+// Clear logs an error as ImmutableSetMultimap is immutable
 func (m *ImmutableSetMultimap[K, V]) Clear() {
-	panic("ImmutableSetMultimap is immutable")
+	err := common.ImmutableOperationError("Clear", "create a new empty multimap")
+	log.Printf("Warning: %v", err)
 }
 
 // Contains returns true if this multimap contains the specified element

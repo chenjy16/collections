@@ -2,18 +2,11 @@
 package list
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/chenjianyu/collections/container/common"
 )
-
-// ErrIndexOutOfBounds indicates that the index is out of range
-var ErrIndexOutOfBounds = errors.New("index out of bounds")
-
-// ErrInvalidRange indicates an invalid range
-var ErrInvalidRange = errors.New("invalid range")
 
 // ArrayList is a List implementation based on dynamic arrays
 type ArrayList[E any] struct {
@@ -49,7 +42,7 @@ func (list *ArrayList[E]) Add(element E) bool {
 // Insert inserts an element at the specified position
 func (list *ArrayList[E]) Insert(index int, element E) error {
 	if index < 0 || index > len(list.elements) {
-		return ErrIndexOutOfBounds
+		return common.IndexOutOfBoundsError(index, len(list.elements))
 	}
 
 	// Add to the end
@@ -68,7 +61,7 @@ func (list *ArrayList[E]) Insert(index int, element E) error {
 // Get retrieves the element at the specified index
 func (list *ArrayList[E]) Get(index int) (E, error) {
 	if index < 0 || index >= len(list.elements) {
-		return *new(E), ErrIndexOutOfBounds
+		return *new(E), common.IndexOutOfBoundsError(index, len(list.elements))
 	}
 	return list.elements[index], nil
 }
@@ -156,7 +149,7 @@ func (list *ArrayList[E]) ToSlice() []E {
 // SubList returns a view of the specified range in the list
 func (list *ArrayList[E]) SubList(fromIndex, toIndex int) (List[E], error) {
 	if fromIndex < 0 || toIndex > len(list.elements) || fromIndex > toIndex {
-		return nil, ErrInvalidRange
+		return nil, common.InvalidRangeError(fromIndex, toIndex)
 	}
 
 	subElements := make([]E, toIndex-fromIndex)

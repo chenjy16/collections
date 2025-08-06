@@ -33,18 +33,28 @@ This library follows Go language conventions and idioms, providing rich collecti
 - 🔧 **Generic Support**: Full Go 1.18+ generics support with type safety
 - ⚡ **High Performance**: Optimized algorithms and efficient memory management
 - 🎯 **Go-Idiomatic**: Clean API design following Go conventions
-- 🧪 **Well Tested**: Comprehensive test coverage with 3,915+ lines of test code
+- 🧪 **Well Tested**: Comprehensive test coverage with 7,757 lines of test code across 19 test files
 - 🔒 **Thread Safety**: Concurrent implementations available where needed
 - 📊 **Set Operations**: Mathematical operations (union, intersection, difference)
 - 🔄 **Iterator Pattern**: Unified traversal interface across all collections
 
 ## Project Statistics
 
-- **Total Go Files**: 36
-- **Source Code Lines**: 6,200+ lines (excluding tests)
-- **Test Code Lines**: 4,500+ lines
-- **Test Files**: 10
-- **Average Test Coverage**: 70%+ (some modules reach 100%)
+- **Total Go Files**: 62
+- **Source Code Lines**: 13,247 lines (excluding tests)
+- **Test Code Lines**: 7,757 lines
+- **Test Files**: 19
+- **Average Test Coverage**: 65.1% (range: 38.5% - 85.1%)
+- **Package Coverage Details**:
+  - Stack: 85.1%
+  - Queue: 80.6%
+  - Set: 80.6%
+  - List: 74.4%
+  - Multiset: 58.5%
+  - Map: 54.4%
+  - Range: 52.3%
+  - Multimap: 51.5%
+  - Common: 38.5%
 
 ## Installation
 
@@ -560,6 +570,38 @@ ContainsValue(value V) bool       // Check value existence
 Keys() []K                        // Get all keys
 Values() []V                      // Get all values
 ```
+
+## Recent Improvements
+
+### Test Coverage Enhancements
+
+The project has undergone significant test coverage improvements:
+
+- **Range Package**: Coverage increased from 15.3% to 52.3% (+37%)
+  - Added comprehensive tests for `rangeImpl` methods
+  - Enhanced `TreeRangeSet` and `TreeRangeMap` test coverage
+  - Added `ImmutableRangeSet` operation tests
+  - Implemented edge case testing for custom comparators
+
+- **Common Package**: Coverage increased from 33.0% to 38.5% (+5.5%)
+  - Added comprehensive error handling tests
+  - Implemented error wrapping and comparison tests
+  - Enhanced error factory function coverage
+
+- **Queue and Set Packages**: Maintained high coverage at 80.6%
+  - Comprehensive test suites for all operations
+  - Edge case and concurrent access testing
+
+- **Stack Package**: Achieved highest coverage at 85.1%
+  - Complete test coverage for all stack operations
+  - Performance and memory management tests
+
+### Quality Assurance
+
+- All tests pass with zero failures
+- Fixed string format inconsistencies in range tests
+- Enhanced error handling with proper `errors.Is()` usage
+- Improved test reliability and maintainability
 
 ## Contributing
 

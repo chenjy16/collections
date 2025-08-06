@@ -24,16 +24,16 @@ type Multiset[E comparable] interface {
 	Add(element E) int
 
 	// AddCount adds the specified number of occurrences of the element
-	// Returns the previous count of the element (0 if not present)
-	AddCount(element E, count int) int
+	// Returns the previous count of the element (0 if not present) and an error if count is negative
+	AddCount(element E, count int) (int, error)
 
 	// Remove removes one occurrence of the specified element from this multiset
 	// Returns the previous count of the element (0 if not present)
 	Remove(element E) int
 
 	// RemoveCount removes the specified number of occurrences of the element
-	// Returns the previous count of the element (0 if not present)
-	RemoveCount(element E, count int) int
+	// Returns the previous count of the element (0 if not present) and an error if count is negative
+	RemoveCount(element E, count int) (int, error)
 
 	// RemoveAll removes all occurrences of the specified element
 	// Returns the previous count of the element (0 if not present)
@@ -43,8 +43,8 @@ type Multiset[E comparable] interface {
 	Count(element E) int
 
 	// SetCount sets the count of the specified element to the given value
-	// Returns the previous count of the element (0 if not present)
-	SetCount(element E, count int) int
+	// Returns the previous count of the element (0 if not present) and an error if count is negative
+	SetCount(element E, count int) (int, error)
 
 	// ElementSet returns a set view of the distinct elements in this multiset
 	ElementSet() []E
