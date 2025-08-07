@@ -13,6 +13,8 @@ This library follows Go language conventions and idioms, providing rich collecti
   - [Set](#-set)
   - [Multiset](#-multiset)
   - [Map](#-map)
+  - [Immutable Collections](#-immutable-collections)
+  - [Graph](#-graph)
   - [Multimap](#-multimap)
   - [Queue](#-queue)
   - [Stack](#-stack)
@@ -29,7 +31,7 @@ This library follows Go language conventions and idioms, providing rich collecti
 
 ## Features
 
-- 🚀 **Rich Collection Types**: List, Set, Map, Queue, Stack implementations
+- 🚀 **Rich Collection Types**: List, Set, Map, Graph, Queue, Stack implementations
 - 🔧 **Generic Support**: Full Go 1.18+ generics support with type safety
 - ⚡ **High Performance**: Optimized algorithms and efficient memory management
 - 🎯 **Go-Idiomatic**: Clean API design following Go conventions
@@ -38,23 +40,7 @@ This library follows Go language conventions and idioms, providing rich collecti
 - 📊 **Set Operations**: Mathematical operations (union, intersection, difference)
 - 🔄 **Iterator Pattern**: Unified traversal interface across all collections
 
-## Project Statistics
 
-- **Total Go Files**: 62
-- **Source Code Lines**: 13,247 lines (excluding tests)
-- **Test Code Lines**: 7,757 lines
-- **Test Files**: 19
-- **Average Test Coverage**: 65.1% (range: 38.5% - 85.1%)
-- **Package Coverage Details**:
-  - Stack: 85.1%
-  - Queue: 80.6%
-  - Set: 80.6%
-  - List: 74.4%
-  - Multiset: 58.5%
-  - Map: 54.4%
-  - Range: 52.3%
-  - Multimap: 51.5%
-  - Common: 38.5%
 
 ## Installation
 
@@ -68,26 +54,32 @@ go get github.com/chenjianyu/collections
 package main
 
 import (
+    "errors"
     "fmt"
+
+    "github.com/chenjianyu/collections/container/common"
+    "github.com/chenjianyu/collections/container/graph"
     "github.com/chenjianyu/collections/container/list"
-    "github.com/chenjianyu/collections/container/set"
     "github.com/chenjianyu/collections/container/map"
     "github.com/chenjianyu/collections/container/multimap"
+    "github.com/chenjianyu/collections/container/queue"
     "github.com/chenjianyu/collections/container/range"
+    "github.com/chenjianyu/collections/container/set"
+    "github.com/chenjianyu/collections/container/stack"
 )
 
 func main() {
-    // ArrayList example
+    // ===== List Example =====
     arrayList := list.New[int]()
     arrayList.Add(1, 2, 3)
     fmt.Println("List size:", arrayList.Size())
 
-    // HashSet example
+    // ===== Set Example =====
     hashSet := set.New[string]()
     hashSet.Add("apple", "banana")
     fmt.Println("Set size:", hashSet.Size())
 
-    // HashMap example
+    // ===== Map Example =====
     hashMap := maps.NewHashMap[string, int]()
     hashMap.Put("one", 1)
     hashMap.Put("two", 2)
@@ -95,39 +87,140 @@ func main() {
         fmt.Println("Value for 'one':", val)
     }
 
-    // ConcurrentSkipListSet example (thread-safe ordered set)
+    // ===== Concurrent Skip List Set =====
     skipSet := set.NewConcurrentSkipListSet[int]()
     skipSet.Add(5, 2, 8, 1)
-    fmt.Println("SkipSet (sorted):", skipSet) // Output: [1, 2, 5, 8]
-    
-    // ArrayListMultimap example
+    fmt.Println("SkipSet (sorted):", skipSet)
+
+    // ===== Multimap Example =====
     multiMap := multimap.NewArrayListMultimap[string, int]()
-    multiMap.Put("numbers", 1)
-    multiMap.Put("numbers", 2)
-    multiMap.Put("numbers", 3)
-    multiMap.Put("letters", 97) // ASCII for 'a'
-    fmt.Println("Values for 'numbers':", multiMap.Get("numbers")) // Output: [1, 2, 3]
-    fmt.Println("Multimap size:", multiMap.Size()) // Output: 4
-    
-    // Range example
-    r1 := ranges.ClosedRange(1, 10)     // [1, 10]
-    r2 := ranges.OpenRange(5, 15)       // (5, 15)
-    fmt.Println("Range contains 5:", r1.Contains(5)) // true
-    
-    // RangeSet example
+    multiMap.Put("numbers", 1, 2, 3)
+    multiMap.Put("letters", 97)
+    fmt.Println("Values for 'numbers':", multiMap.Get("numbers"))
+    fmt.Println("Multimap size:", multiMap.Size())
+
+    // ===== Range Examples =====
+    r1 := ranges.ClosedRange(1, 10)
+    r2 := ranges.OpenRange(5, 15)
+    fmt.Println("Range contains 5:", r1.Contains(5))
+
     rs := ranges.NewTreeRangeSet[int]()
-    rs.Add(r1)
-    rs.Add(r2)
-    fmt.Println("RangeSet contains 8:", rs.ContainsValue(8)) // true
-    
-    // RangeMap example
+    rs.Add(r1, r2)
+    fmt.Println("RangeSet contains 8:", rs.ContainsValue(8))
+
     rm := ranges.NewTreeRangeMap[int, string]()
     rm.Put(r1, "first range")
     rm.Put(r2, "second range")
     if value, ok := rm.Get(8); ok {
-        fmt.Println("Value for 8:", value) // "first range"
+        fmt.Println("Value for 8:", value)
     }
+
+    // ===== Error Handling for ArrayList =====
+    fmt.Println("\nArrayList Error Handling:")
+    arrayList = list.New[int]()
+    _, err := arrayList.Get(0)
+    if err != nil && errors.Is(err, common.ErrIndexOutOfBounds) {
+        fmt.Println("✓ IndexOutOfBounds on empty list")
+    }
+    arrayList.Add(1, 2)
+    _, err = arrayList.Get(5)
+    if err != nil {
+        fmt.Println("Invalid index error:", err)
+    }
+    _, err = arrayList.SubList(2, 1)
+    if err != nil {
+        fmt.Println("Invalid range error:", err)
+    }
+
+    // ===== Error Handling for LinkedList =====
+    fmt.Println("\nLinkedList Error Handling:")
+    linkedList := list.NewLinkedList[string]()
+    _, err = linkedList.GetFirst()
+    if err != nil && errors.Is(err, common.ErrEmptyContainer) {
+        fmt.Println("✓ EmptyContainer on GetFirst")
+    }
+
+    // ===== Stack with Capacity Limit =====
+    fmt.Println("\nStack Error Handling:")
+    limitedStack := stack.WithCapacity[int](2)
+    limitedStack.Push(1, 2)
+    err = limitedStack.Push(3)
+    if err != nil && errors.Is(err, common.ErrFullContainer) {
+        fmt.Println("✓ FullContainer on Push")
+    }
+    emptyStack := stack.New[int]()
+    _, err = emptyStack.Pop()
+    if err != nil {
+        fmt.Println("Error popping from empty stack:", err)
+    }
+
+    // ===== Priority Queue Error =====
+    fmt.Println("\nPriorityQueue Error Handling:")
+    emptyQueue := queue.NewPriorityQueueWithComparator[int](func(a, b int) int { return a - b })
+    _, err = emptyQueue.Remove()
+    if err != nil {
+        fmt.Println("Error removing from empty queue:", err)
+    }
+
+    // ===== LinkedList Queue Error =====
+    fmt.Println("\nLinkedListQueue Error Handling:")
+    emptyLLQueue := queue.New[string]()
+    _, err = emptyLLQueue.GetFirst()
+    if err != nil {
+        fmt.Println("Error getting first element from empty queue:", err)
+    }
+
+    // ===== Graph Examples =====
+    fmt.Println("\nBasic Graph Example:")
+    g := graph.UndirectedGraph[string]()
+    g.AddNode("A", "B", "C")
+    g.PutEdge("A", "B")
+    g.PutEdge("B", "C")
+    fmt.Println("A connected to B:", g.HasEdgeConnecting("A", "B"))
+    fmt.Println("A's neighbors:", g.AdjacentNodes("A"))
+
+    fmt.Println("\nDirected Graph:")
+    dg := graph.DirectedGraph[int]()
+    dg.AddNode(1, 2, 3)
+    dg.PutEdge(1, 2, 2, 3, 3, 1)
+    fmt.Println("Node 2 in-degree:", dg.InDegree(2))
+
+    fmt.Println("\nValueGraph:")
+    vg := graph.UndirectedValueGraph[string, int]()
+    vg.AddNode("X", "Y")
+    vg.PutEdgeValue("X", "Y", 100)
+    if val, ok := vg.EdgeValue("X", "Y"); ok {
+        fmt.Println("Edge X->Y value:", val)
+    }
+
+    fmt.Println("\nNetwork Example:")
+    net := graph.UndirectedNetwork[string, string]()
+    net.AddNode("N1", "N2")
+    net.AddEdge("E1", "N1", "N2")
+    fmt.Println("Edge endpoints:", net.IncidentNodes("E1"))
+
+    // ===== Immutable Collections =====
+    fmt.Println("\nImmutable Collections:")
+    immutableList := list.Of(1, 2, 3)
+    newList := immutableList.WithAdd(4)
+    fmt.Println("Original:", immutableList)
+    fmt.Println("New:", newList)
+
+    immutableSet := set.SetOf("a", "b")
+    newSet := immutableSet.WithAdd("c")
+    fmt.Println("Original:", immutableSet)
+    fmt.Println("New:", newSet)
+
+    immutableMap := maps.MapOf(
+        maps.Pair[string, int]{Key: "x", Value: 1},
+        maps.Pair[string, int]{Key: "y", Value: 2},
+    )
+    newMap := immutableMap.WithPut("z", 3)
+    fmt.Println("Original map size:", immutableMap.Size())
+    fmt.Println("New map size:", newMap.Size())
 }
+
+
 ```
 
 ## Collection Types
@@ -222,6 +315,113 @@ Key-value pair collections with different characteristics.
   - Segment-based locking
   - High concurrent performance
   - Lock-free reads
+
+### 🔒 Immutable Collections
+
+immutable collections that provide thread-safe, copy-on-write semantics.
+
+- **ImmutableList**: Immutable list implementation
+  - Thread-safe by design
+  - Copy-on-write semantics for modifications
+  - Returns new instances for all modification operations
+  - Supports all standard list operations (get, indexOf, subList)
+  - Creation methods: `NewImmutableList()`, `NewImmutableListFromSlice()`, `Of()`
+
+- **ImmutableSet**: Immutable set implementation
+  - Thread-safe by design
+  - Copy-on-write semantics for modifications
+  - Returns new instances for all modification operations
+  - Supports set operations (union, intersection, difference)
+  - Creation methods: `NewImmutableSet()`, `NewImmutableSetFromSlice()`, `SetOf()`
+
+- **ImmutableMap**: Immutable map implementation
+  - Thread-safe by design
+  - Copy-on-write semantics for modifications
+  - Returns new instances for all modification operations
+  - Supports all standard map operations (get, keys, values, entries)
+  - Creation methods: `NewImmutableMap()`, `NewImmutableMapFromMap()`, `MapOf()`
+
+### 🕸️ Graph
+
+graph data structures for modeling relationships between nodes.
+
+- **Graph[N]**: Basic graph interface for node relationships
+  - **MutableGraph**: Mutable graph implementation
+  - Supports both directed and undirected graphs
+  - Self-loops configurable
+  - Node and edge management operations
+  - Graph traversal methods (successors, predecessors, adjacent nodes)
+
+- **ValueGraph[N,V]**: Graph with values on edges
+  - **MutableValueGraph**: Mutable value graph implementation
+  - Associates values with edges
+  - All Graph operations plus edge value management
+  - Efficient edge value lookup and modification
+  - AsGraph() view for basic graph operations
+
+- **Network[N,E]**: Graph with explicit edge objects
+  - **MutableNetwork**: Mutable network implementation
+  - Explicit edge objects with unique identities
+  - Supports parallel edges (configurable)
+  - Edge-centric operations (incident nodes, adjacent edges)
+  - AsGraph() view for basic graph operations
+
+#### Graph Properties
+
+- **Directedness**: Directed or undirected graphs
+- **Self-loops**: Allow or disallow self-loops
+- **Parallel edges**: Allow or disallow parallel edges (Network only)
+- **Node ordering**: Configurable node iteration order
+- **Edge ordering**: Configurable edge iteration order (Network only)
+
+#### Core Implementation
+
+- **Graph Interface Series**： Implemented three core interfaces: Graph, ValueGraph, and Network.
+- **Mutable Implementations**： Created complete implementations for MutableGraph, MutableValueGraph, and MutableNetwork.
+- **Builder Pattern**： Implemented GraphBuilder, ValueGraphBuilder, and NetworkBuilder, supporting fluent configuration.
+- **Convenience Functions**：Provided convenience constructors such as DirectedGraph, UndirectedGraph, etc.
+
+#### Functional Features
+
+- **Directionality Support**： Supports directed and undirected graphs.
+- **Self-Loop Support**： Configurable self-loop handling.
+- **Parallel Edge Support**： The Network interface supports multiple edges.
+- **Edge Value Support**： ValueGraph supports edge weights/values.
+- **Element Ordering**： Supports unordered, insertion order, and natural order.
+- **View Adapters**： ValueGraph and Network can be converted to a basic Graph view.
+
+
+
+#### Builder Pattern
+
+```go
+// Graph builders for flexible configuration
+graph := NewGraphBuilder[string]().
+    Directed().
+    AllowSelfLoops().
+    Build()
+
+valueGraph := NewValueGraphBuilder[string, int]().
+    Undirected().
+    Build()
+
+network := NewNetworkBuilder[string, string]().
+    Directed().
+    AllowParallelEdges().
+    Build()
+```
+
+#### Convenience Factory Functions
+
+```go
+// Quick creation methods
+g1 := UndirectedGraph[string]()
+g2 := DirectedGraph[int]()
+vg1 := UndirectedValueGraph[string, float64]()
+vg2 := DirectedValueGraph[int, string]()
+n1 := UndirectedNetwork[string, string]()
+n2 := DirectedNetwork[int, int]()
+```
 
 ### 🔄 Multimap
 
@@ -340,6 +540,7 @@ container/
 ├── multimap/   # Multimap implementations (ArrayListMultimap, HashMultimap, etc.)
 ├── queue/      # Queue implementations
 ├── stack/      # Stack implementations
+├── graph/      # Graph implementations (Graph, ValueGraph, Network)
 └── range/      # Range implementations (Range, RangeSet, RangeMap)
 ```
 
@@ -403,30 +604,6 @@ for iterator.HasNext() {
 }
 ```
 
-## Performance
-
-### Benchmark Results
-
-Collection performance characteristics (operations per second):
-
-```
-BenchmarkArrayList_Add-10           50000000    25.2 ns/op
-BenchmarkArrayList_Get-10          100000000    10.1 ns/op
-BenchmarkLinkedList_Add-10          30000000    45.3 ns/op
-BenchmarkHashSet_Add-10             20000000    65.4 ns/op
-BenchmarkHashSet_Contains-10       100000000    12.8 ns/op
-BenchmarkTreeSet_Add-10             10000000   125.7 ns/op
-BenchmarkConcurrentHashMap_Get-10   15000000    79.9 ns/op
-BenchmarkConcurrentHashMap_Put-10   11000000   122.4 ns/op
-```
-
-### Performance Guidelines
-
-- **ArrayList**: Best for index-based access and append operations
-- **LinkedList**: Best for frequent insertions/deletions
-- **HashSet**: Best for fast membership testing
-- **TreeSet**: Best when ordering is required
-- **ConcurrentHashMap**: Best for high-concurrency scenarios
 
 ## Thread Safety
 
@@ -571,30 +748,50 @@ Keys() []K                        // Get all keys
 Values() []V                      // Get all values
 ```
 
+#### Graph Interface
+```go
+// Basic Graph Operations
+Nodes() set.Set[N]                // Get all nodes
+Edges() set.Set[EndpointPair[N]]  // Get all edges
+IsDirected() bool                 // Check if directed
+AllowsSelfLoops() bool            // Check if self-loops allowed
+NodeOrder() ElementOrder          // Get node ordering
+Degree(node N) int                // Get node degree
+InDegree(node N) int              // Get in-degree (directed)
+OutDegree(node N) int             // Get out-degree (directed)
+
+// Node Relationships
+Adjacents(node N) set.Set[N]      // Get adjacent nodes
+Predecessors(node N) set.Set[N]   // Get predecessor nodes
+Successors(node N) set.Set[N]     // Get successor nodes
+IncidentEdges(node N) set.Set[EndpointPair[N]] // Get incident edges
+
+// Connectivity
+HasEdgeConnecting(nodeU, nodeV N) bool // Check edge existence
+```
+
+#### ValueGraph Interface
+```go
+// Inherits all Graph methods plus:
+EdgeValue(nodeU, nodeV N) (V, bool)           // Get edge value
+EdgeValueOrDefault(nodeU, nodeV N, defaultValue V) V // Get edge value with default
+AsGraph() Graph[N]                            // View as basic graph
+```
+
+#### Network Interface
+```go
+// Inherits all Graph methods plus:
+AllowsParallelEdges() bool                    // Check if parallel edges allowed
+EdgeOrder() ElementOrder                      // Get edge ordering
+EdgesConnecting(nodeU, nodeV N) set.Set[E]   // Get connecting edges
+InEdges(node N) set.Set[E]                   // Get incoming edges
+OutEdges(node N) set.Set[E]                  // Get outgoing edges
+IncidentNodes(edge E) EndpointPair[N]        // Get edge endpoints
+AsGraph() Graph[N]                           // View as basic graph
+```
+
 ## Recent Improvements
 
-### Test Coverage Enhancements
-
-The project has undergone significant test coverage improvements:
-
-- **Range Package**: Coverage increased from 15.3% to 52.3% (+37%)
-  - Added comprehensive tests for `rangeImpl` methods
-  - Enhanced `TreeRangeSet` and `TreeRangeMap` test coverage
-  - Added `ImmutableRangeSet` operation tests
-  - Implemented edge case testing for custom comparators
-
-- **Common Package**: Coverage increased from 33.0% to 38.5% (+5.5%)
-  - Added comprehensive error handling tests
-  - Implemented error wrapping and comparison tests
-  - Enhanced error factory function coverage
-
-- **Queue and Set Packages**: Maintained high coverage at 80.6%
-  - Comprehensive test suites for all operations
-  - Edge case and concurrent access testing
-
-- **Stack Package**: Achieved highest coverage at 85.1%
-  - Complete test coverage for all stack operations
-  - Performance and memory management tests
 
 ### Quality Assurance
 
