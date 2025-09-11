@@ -3,7 +3,9 @@ package common
 
 import (
 	"fmt"
+	"hash"
 	"hash/fnv"
+	"math"
 	"reflect"
 	"strings"
 )
@@ -15,11 +17,84 @@ func Equal(a, b interface{}) bool {
 }
 
 // Hash calculates the hash code of a value
-// Uses FNV-1a algorithm to hash the string representation of the value
+// Uses a unified approach with proper handling of all types including floats
 func Hash(v interface{}) uint64 {
 	h := fnv.New64a()
-	h.Write([]byte(fmt.Sprintf("%v", v)))
+	hashValue(reflect.ValueOf(v), h)
 	return h.Sum64()
+}
+
+// hashValue recursively calculates hash value
+func hashValue(v reflect.Value, h hash.Hash64) {
+	switch v.Kind() {
+	case reflect.Bool:
+		if v.Bool() {
+			h.Write([]byte{1})
+		} else {
+			h.Write([]byte{0})
+		}
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		writeInt64ToHash(h, v.Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		writeUint64ToHash(h, v.Uint())
+	case reflect.Float32:
+		// Handle float32 properly by converting to bits
+		f32 := float32(v.Float())
+		bits := math.Float32bits(f32)
+		writeUint64ToHash(h, uint64(bits))
+	case reflect.Float64:
+		// Handle float64 properly by converting to bits
+		f64 := v.Float()
+		bits := math.Float64bits(f64)
+		writeUint64ToHash(h, bits)
+	case reflect.String:
+		h.Write([]byte(v.String()))
+	case reflect.Slice, reflect.Array:
+		// Hash length first to distinguish between different length arrays
+		writeInt64ToHash(h, int64(v.Len()))
+		for i := 0; i < v.Len(); i++ {
+			hashValue(v.Index(i), h)
+		}
+	case reflect.Struct:
+		for i := 0; i < v.NumField(); i++ {
+			hashValue(v.Field(i), h)
+		}
+	case reflect.Ptr:
+		if !v.IsNil() {
+			hashValue(v.Elem(), h)
+		} else {
+			// Hash nil pointer as a special value
+			h.Write([]byte{0xFF, 0xFF, 0xFF, 0xFF})
+		}
+	case reflect.Interface:
+		if !v.IsNil() {
+			hashValue(v.Elem(), h)
+		} else {
+			// Hash nil interface as a special value
+			h.Write([]byte{0xFF, 0xFF, 0xFF, 0xFF})
+		}
+	default:
+		// For other types, use their string representation
+		h.Write([]byte(fmt.Sprintf("%v", v.Interface())))
+	}
+}
+
+// writeInt64ToHash writes int64 value to hash
+func writeInt64ToHash(h hash.Hash64, val int64) {
+	bytes := make([]byte, 8)
+	for i := 0; i < 8; i++ {
+		bytes[i] = byte(val >> (8 * i))
+	}
+	h.Write(bytes)
+}
+
+// writeUint64ToHash writes uint64 value to hash
+func writeUint64ToHash(h hash.Hash64, val uint64) {
+	bytes := make([]byte, 8)
+	for i := 0; i < 8; i++ {
+		bytes[i] = byte(val >> (8 * i))
+	}
+	h.Write(bytes)
 }
 
 // Compare compares two values

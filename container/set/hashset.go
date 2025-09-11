@@ -3,9 +3,9 @@ package set
 
 import (
 	"fmt"
-	"github.com/chenjianyu/collections/container/common"
-	"hash/fnv"
 	"strings"
+
+	"github.com/chenjianyu/collections/container/common"
 )
 
 // HashSet is a Set implementation based on hash table
@@ -163,7 +163,7 @@ func (s *HashSet[E]) IsSubsetOf(other Set[E]) bool {
 
 	// If this set is larger than the other set, it cannot be a subset
 	if s.Size() > other.Size() {
-		return true
+		return false
 	}
 
 	// Check if every element in this set is in the other set
@@ -256,7 +256,9 @@ func (it *hashSetIterator[E]) Remove() bool {
 
 // hash computes hash value for the element
 func (s *HashSet[E]) hash(element E) int {
-	h := fnv.New32a()
-	h.Write([]byte(fmt.Sprintf("%v", element)))
-	return int(h.Sum32())
+	hashValue := int(common.Hash(element))
+	if hashValue < 0 {
+		hashValue = -hashValue
+	}
+	return hashValue
 }

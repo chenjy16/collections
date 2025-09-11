@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"hash"
 	"hash/fnv"
+	"math"
 	"reflect"
 )
 
@@ -32,6 +33,7 @@ func (p Pair[K, V]) String() string {
 }
 
 // Hash calculates the hash value of any type
+// Uses a unified approach that handles special cases properly
 func Hash(v interface{}) uint64 {
 	h := fnv.New64a()
 	hashValue(reflect.ValueOf(v), h)
@@ -51,11 +53,21 @@ func hashValue(v reflect.Value, h hash.Hash64) {
 		writeInt64(h, v.Int())
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		writeUint64(h, v.Uint())
-	case reflect.Float32, reflect.Float64:
-		writeUint64(h, v.Uint())
+	case reflect.Float32:
+		// Handle float32 properly by converting to bits
+		f32 := float32(v.Float())
+		bits := math.Float32bits(f32)
+		writeUint64(h, uint64(bits))
+	case reflect.Float64:
+		// Handle float64 properly by converting to bits
+		f64 := v.Float()
+		bits := math.Float64bits(f64)
+		writeUint64(h, bits)
 	case reflect.String:
 		h.Write([]byte(v.String()))
 	case reflect.Slice, reflect.Array:
+		// Hash length first to distinguish between different length arrays
+		writeInt64(h, int64(v.Len()))
 		for i := 0; i < v.Len(); i++ {
 			hashValue(v.Index(i), h)
 		}
@@ -66,10 +78,16 @@ func hashValue(v reflect.Value, h hash.Hash64) {
 	case reflect.Ptr:
 		if !v.IsNil() {
 			hashValue(v.Elem(), h)
+		} else {
+			// Hash nil pointer as a special value
+			h.Write([]byte{0xFF, 0xFF, 0xFF, 0xFF})
 		}
 	case reflect.Interface:
 		if !v.IsNil() {
 			hashValue(v.Elem(), h)
+		} else {
+			// Hash nil interface as a special value
+			h.Write([]byte{0xFF, 0xFF, 0xFF, 0xFF})
 		}
 	default:
 		// For other types, use their string representation
