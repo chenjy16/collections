@@ -83,7 +83,10 @@ func TestMutableValueGraphBasicOperations(t *testing.T) {
 	}
 	
 	// Test successors and predecessors
-	successors := g.Successors("A")
+	successors, err := g.Successors("A")
+	if err != nil {
+		t.Errorf("Expected Successors to succeed, got error: %v", err)
+	}
 	if !successors.Contains("B") {
 		t.Error("Expected B to be successor of A")
 	}
@@ -127,22 +130,36 @@ func TestDirectedValueGraph(t *testing.T) {
 	}
 	
 	// Test successors and predecessors
-	successors := g.Successors(1)
+	successors, err := g.Successors(1)
+	if err != nil {
+		t.Errorf("Expected Successors to succeed, got error: %v", err)
+	}
 	if !successors.Contains(2) {
 		t.Error("Expected 2 to be successor of 1")
 	}
 	
-	predecessors := g.Predecessors(2)
+	predecessors, err := g.Predecessors(2)
+	if err != nil {
+		t.Errorf("Expected Predecessors to succeed, got error: %v", err)
+	}
 	if !predecessors.Contains(1) {
 		t.Error("Expected 1 to be predecessor of 2")
 	}
 	
 	// Test in-degree and out-degree
-	if g.InDegree(2) != 1 {
-		t.Errorf("Expected in-degree 1 for node 2, got %d", g.InDegree(2))
+	inDegree, err := g.InDegree(2)
+	if err != nil {
+		t.Errorf("Expected InDegree to succeed, got error: %v", err)
 	}
-	if g.OutDegree(2) != 1 {
-		t.Errorf("Expected out-degree 1 for node 2, got %d", g.OutDegree(2))
+	if inDegree != 1 {
+		t.Errorf("Expected in-degree 1 for node 2, got %d", inDegree)
+	}
+	outDegree, err := g.OutDegree(2)
+	if err != nil {
+		t.Errorf("Expected OutDegree to succeed, got error: %v", err)
+	}
+	if outDegree != 1 {
+		t.Errorf("Expected out-degree 1 for node 2, got %d", outDegree)
 	}
 }
 
@@ -164,13 +181,20 @@ func TestValueGraphPanicOnSelfLoop(t *testing.T) {
 	g := UndirectedValueGraph[string, int]()
 	g.AddNode("A")
 	
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("Expected panic when adding self-loop to graph that doesn't allow them")
-		}
-	}()
+	// The new implementation doesn't panic but rather returns false
+	// when self-loops are not allowed and attempted to be added
+	oldValue, existed := g.PutEdgeValue("A", "A", 42)
+	if existed {
+		t.Error("Expected self-loop not to be added when not allowed")
+	}
+	if oldValue != 0 { // zero value for int
+		t.Error("Expected zero value when self-loop fails to be added")
+	}
 	
-	g.PutEdgeValue("A", "A", 42)
+	// Verify self-loop was not actually added
+	if g.HasEdgeConnecting("A", "A") {
+		t.Error("Expected self-loop not to exist when not allowed")
+	}
 }
 
 func TestValueGraphEdges(t *testing.T) {
@@ -189,7 +213,10 @@ func TestValueGraphEdges(t *testing.T) {
 	}
 	
 	// Test incident edges
-	incidentEdges := g.IncidentEdges("B")
+	incidentEdges, err := g.IncidentEdges("B")
+	if err != nil {
+		t.Errorf("Expected IncidentEdges to succeed, got error: %v", err)
+	}
 	if incidentEdges.Size() != 2 {
 		t.Errorf("Expected 2 incident edges for B, got %d", incidentEdges.Size())
 	}
@@ -260,7 +287,10 @@ func TestValueGraphAsGraphView(t *testing.T) {
 	}
 	
 	// Test that basic graph operations work
-	successors := graph.Successors("A")
+	successors, err := graph.Successors("A")
+	if err != nil {
+		t.Errorf("Expected graph Successors to succeed, got error: %v", err)
+	}
 	if !successors.Contains("B") {
 		t.Error("Expected B to be successor of A in graph view")
 	}

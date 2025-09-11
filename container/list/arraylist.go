@@ -52,7 +52,7 @@ func (list *ArrayList[E]) Insert(index int, element E) error {
 	}
 
 	// Insert in the middle
-	list.elements = append(list.elements, *new(E)) // Extend the slice
+	list.elements = append(list.elements, common.ZeroValue[E]()) // Extend the slice
 	copy(list.elements[index+1:], list.elements[index:])
 	list.elements[index] = element
 	return nil
@@ -61,7 +61,7 @@ func (list *ArrayList[E]) Insert(index int, element E) error {
 // Get retrieves the element at the specified index
 func (list *ArrayList[E]) Get(index int) (E, error) {
 	if index < 0 || index >= len(list.elements) {
-		return *new(E), common.IndexOutOfBoundsError(index, len(list.elements))
+		return common.ZeroValue[E](), common.IndexOutOfBoundsError(index, len(list.elements))
 	}
 	return list.elements[index], nil
 }
@@ -69,7 +69,7 @@ func (list *ArrayList[E]) Get(index int) (E, error) {
 // Set replaces the element at the specified index
 func (list *ArrayList[E]) Set(index int, element E) (E, bool) {
 	if index < 0 || index >= len(list.elements) {
-		return *new(E), false
+		return common.ZeroValue[E](), false
 	}
 	oldElement := list.elements[index]
 	list.elements[index] = element
@@ -79,11 +79,13 @@ func (list *ArrayList[E]) Set(index int, element E) (E, bool) {
 // RemoveAt removes the element at the specified index
 func (list *ArrayList[E]) RemoveAt(index int) (E, bool) {
 	if index < 0 || index >= len(list.elements) {
-		return *new(E), false
+		return common.ZeroValue[E](), false
 	}
 	element := list.elements[index]
 	// Move elements to fill the gap
 	copy(list.elements[index:], list.elements[index+1:])
+	// Clear the last element to avoid memory leak
+	list.elements[len(list.elements)-1] = common.ZeroValue[E]()
 	// Shrink the slice
 	list.elements = list.elements[:len(list.elements)-1]
 	return element, true
@@ -134,9 +136,18 @@ func (list *ArrayList[E]) IsEmpty() bool {
 	return len(list.elements) == 0
 }
 
-// Clear empties the list
+// Clear empties the list and releases memory by setting elements to zero values
 func (list *ArrayList[E]) Clear() {
-	list.elements = list.elements[:0]
+	// Clear all elements to prevent memory leaks
+	for i := range list.elements {
+		list.elements[i] = common.ZeroValue[E]()
+	}
+	// Reset the slice to zero length but keep some capacity for reuse
+	if cap(list.elements) > 100 { // Only shrink if capacity is large
+		list.elements = make([]E, 0, 16) // Reset to smaller capacity
+	} else {
+		list.elements = list.elements[:0]
+	}
 }
 
 // ToSlice returns a slice containing all elements in the list
@@ -202,7 +213,7 @@ func (it *arrayListIterator[E]) HasNext() bool {
 // Next returns the next element in the iterator
 func (it *arrayListIterator[E]) Next() (E, bool) {
 	if !it.HasNext() {
-		return *new(E), false
+		return common.ZeroValue[E](), false
 	}
 
 	element := it.list.elements[it.cursor]

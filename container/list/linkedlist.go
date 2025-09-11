@@ -126,7 +126,7 @@ func (list *LinkedList[E]) Insert(index int, element E) error {
 // Get retrieves the element at the specified index
 func (list *LinkedList[E]) Get(index int) (E, error) {
 	if index < 0 || index >= list.size {
-		return *new(E), common.IndexOutOfBoundsError(index, list.size)
+		return common.ZeroValue[E](), common.IndexOutOfBoundsError(index, list.size)
 	}
 
 	node := list.getNodeAt(index)
@@ -136,7 +136,7 @@ func (list *LinkedList[E]) Get(index int) (E, error) {
 // Set replaces the element at the specified index
 func (list *LinkedList[E]) Set(index int, element E) (E, bool) {
 	if index < 0 || index >= list.size {
-		return *new(E), false
+		return common.ZeroValue[E](), false
 	}
 
 	node := list.getNodeAt(index)
@@ -148,7 +148,7 @@ func (list *LinkedList[E]) Set(index int, element E) (E, bool) {
 // RemoveAt removes the element at the specified index
 func (list *LinkedList[E]) RemoveAt(index int) (E, bool) {
 	if index < 0 || index >= list.size {
-		return *new(E), false
+		return common.ZeroValue[E](), false
 	}
 
 	if index == 0 {
@@ -285,7 +285,7 @@ func (list *LinkedList[E]) AddLast(element E) {
 // RemoveFirst removes and returns the first element of the list
 func (list *LinkedList[E]) RemoveFirst() (E, bool) {
 	if list.head == nil {
-		return *new(E), false
+		return common.ZeroValue[E](), false
 	}
 
 	data := list.head.data
@@ -305,7 +305,7 @@ func (list *LinkedList[E]) RemoveFirst() (E, bool) {
 // RemoveLast removes and returns the last element of the list
 func (list *LinkedList[E]) RemoveLast() (E, bool) {
 	if list.tail == nil {
-		return *new(E), false
+		return common.ZeroValue[E](), false
 	}
 
 	data := list.tail.data
@@ -325,7 +325,7 @@ func (list *LinkedList[E]) RemoveLast() (E, bool) {
 // GetFirst returns the first element of the list without removing it
 func (list *LinkedList[E]) GetFirst() (E, error) {
 	if list.head == nil {
-		return *new(E), common.EmptyContainerError("LinkedList")
+		return common.ZeroValue[E](), common.EmptyContainerError("LinkedList")
 	}
 	return list.head.data, nil
 }
@@ -333,7 +333,7 @@ func (list *LinkedList[E]) GetFirst() (E, error) {
 // GetLast returns the last element of the list without removing it
 func (list *LinkedList[E]) GetLast() (E, error) {
 	if list.tail == nil {
-		return *new(E), common.EmptyContainerError("LinkedList")
+		return common.ZeroValue[E](), common.EmptyContainerError("LinkedList")
 	}
 	return list.tail.data, nil
 }
@@ -387,7 +387,7 @@ func (it *linkedListIterator[E]) HasNext() bool {
 // Next returns the next element in the iterator
 func (it *linkedListIterator[E]) Next() (E, bool) {
 	if !it.HasNext() {
-		return *new(E), false
+		return common.ZeroValue[E](), false
 	}
 
 	data := it.current.data

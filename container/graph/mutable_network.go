@@ -91,7 +91,7 @@ func (n *MutableNetwork[N, E]) AddNode(node N) bool {
 	if n.nodes.Contains(node) {
 		return false
 	}
-	
+
 	n.nodes.Add(node)
 	n.nodeToEdges[node] = set.New[E]()
 	if n.directed {
@@ -102,38 +102,38 @@ func (n *MutableNetwork[N, E]) AddNode(node N) bool {
 }
 
 // AddEdge adds an edge between two nodes
-func (n *MutableNetwork[N, E]) AddEdge(edge E, nodeU, nodeV N) bool {
+func (n *MutableNetwork[N, E]) AddEdge(edge E, nodeU, nodeV N) error {
 	// Check if edge already exists
 	if n.edges.Contains(edge) {
-		return false
+		return nil // Edge already exists, no error
 	}
-	
+
 	// Check self-loop constraint
 	if !n.allowSelfLoops && nodeU == nodeV {
-		panic("Self-loops are not allowed in this network")
+		return common.SelfLoopNotAllowedError(nodeU)
 	}
-	
+
 	// Check parallel edge constraint
 	if !n.allowParallelEdges && n.HasEdgeConnecting(nodeU, nodeV) {
-		panic("Parallel edges are not allowed in this network")
+		return common.ParallelEdgeNotAllowedError(nodeU, nodeV)
 	}
-	
+
 	// Add nodes if they don't exist
 	n.AddNode(nodeU)
 	n.AddNode(nodeV)
-	
+
 	// Add edge
 	n.edges.Add(edge)
 	n.edgeToNodes[edge] = NewEndpointPair(nodeU, nodeV)
 	n.nodeToEdges[nodeU].Add(edge)
 	n.nodeToEdges[nodeV].Add(edge)
-	
+
 	if n.directed {
 		n.outEdges[nodeU].Add(edge)
 		n.inEdges[nodeV].Add(edge)
 	}
-	
-	return true
+
+	return nil
 }
 
 // RemoveNode removes a node and all its incident edges
@@ -141,14 +141,14 @@ func (n *MutableNetwork[N, E]) RemoveNode(node N) bool {
 	if !n.nodes.Contains(node) {
 		return false
 	}
-	
+
 	// Remove all incident edges
 	incidentEdges := n.nodeToEdges[node]
 	edgesToRemove := incidentEdges.ToSlice()
 	for _, edge := range edgesToRemove {
 		n.RemoveEdge(edge)
 	}
-	
+
 	// Remove the node itself
 	n.nodes.Remove(node)
 	delete(n.nodeToEdges, node)
@@ -156,7 +156,7 @@ func (n *MutableNetwork[N, E]) RemoveNode(node N) bool {
 		delete(n.inEdges, node)
 		delete(n.outEdges, node)
 	}
-	
+
 	return true
 }
 
@@ -165,32 +165,32 @@ func (n *MutableNetwork[N, E]) RemoveEdge(edge E) bool {
 	if !n.edges.Contains(edge) {
 		return false
 	}
-	
+
 	endpoints := n.edgeToNodes[edge]
 	nodeU, nodeV := endpoints.NodeU, endpoints.NodeV
-	
+
 	// Remove edge from data structures
 	n.edges.Remove(edge)
 	delete(n.edgeToNodes, edge)
 	n.nodeToEdges[nodeU].Remove(edge)
 	n.nodeToEdges[nodeV].Remove(edge)
-	
+
 	if n.directed {
 		n.outEdges[nodeU].Remove(edge)
 		n.inEdges[nodeV].Remove(edge)
 	}
-	
+
 	return true
 }
 
 // Successors returns the successors of a node
-func (n *MutableNetwork[N, E]) Successors(node N) set.Set[N] {
+func (n *MutableNetwork[N, E]) Successors(node N) (set.Set[N], error) {
 	if !n.nodes.Contains(node) {
-		panic(fmt.Sprintf("Node %v is not in the network", node))
+		return nil, common.NodeNotFoundError(node)
 	}
-	
+
 	result := set.New[N]()
-	
+
 	if n.directed {
 		n.outEdges[node].ForEach(func(edge E) {
 			endpoints := n.edgeToNodes[edge]
@@ -206,18 +206,18 @@ func (n *MutableNetwork[N, E]) Successors(node N) set.Set[N] {
 			}
 		})
 	}
-	
-	return result
+
+	return result, nil
 }
 
 // Predecessors returns the predecessors of a node
-func (n *MutableNetwork[N, E]) Predecessors(node N) set.Set[N] {
+func (n *MutableNetwork[N, E]) Predecessors(node N) (set.Set[N], error) {
 	if !n.nodes.Contains(node) {
-		panic(fmt.Sprintf("Node %v is not in the network", node))
+		return nil, common.NodeNotFoundError(node)
 	}
-	
+
 	result := set.New[N]()
-	
+
 	if n.directed {
 		n.inEdges[node].ForEach(func(edge E) {
 			endpoints := n.edgeToNodes[edge]
@@ -227,18 +227,18 @@ func (n *MutableNetwork[N, E]) Predecessors(node N) set.Set[N] {
 		// For undirected networks, predecessors are the same as successors
 		return n.Successors(node)
 	}
-	
-	return result
+
+	return result, nil
 }
 
 // AdjacentNodes returns all nodes adjacent to the given node
-func (n *MutableNetwork[N, E]) AdjacentNodes(node N) set.Set[N] {
+func (n *MutableNetwork[N, E]) AdjacentNodes(node N) (set.Set[N], error) {
 	if !n.nodes.Contains(node) {
-		panic(fmt.Sprintf("Node %v is not in the network", node))
+		return nil, common.NodeNotFoundError(node)
 	}
-	
+
 	result := set.New[N]()
-	
+
 	n.nodeToEdges[node].ForEach(func(edge E) {
 		endpoints := n.edgeToNodes[edge]
 		if endpoints.NodeU == node {
@@ -247,29 +247,29 @@ func (n *MutableNetwork[N, E]) AdjacentNodes(node N) set.Set[N] {
 			result.Add(endpoints.NodeU)
 		}
 	})
-	
-	return result
+
+	return result, nil
 }
 
 // IncidentEdges returns all edges incident to the given node
-func (n *MutableNetwork[N, E]) IncidentEdges(node N) set.Set[E] {
+func (n *MutableNetwork[N, E]) IncidentEdges(node N) (set.Set[E], error) {
 	if !n.nodes.Contains(node) {
-		panic(fmt.Sprintf("Node %v is not in the network", node))
+		return nil, common.NodeNotFoundError(node)
 	}
-	
+
 	result := set.New[E]()
 	n.nodeToEdges[node].ForEach(func(edge E) {
 		result.Add(edge)
 	})
-	return result
+	return result, nil
 }
 
 // InEdges returns all incoming edges to a node
-func (n *MutableNetwork[N, E]) InEdges(node N) set.Set[E] {
+func (n *MutableNetwork[N, E]) InEdges(node N) (set.Set[E], error) {
 	if !n.nodes.Contains(node) {
-		panic(fmt.Sprintf("Node %v is not in the network", node))
+		return nil, common.NodeNotFoundError(node)
 	}
-	
+
 	result := set.New[E]()
 	if n.directed {
 		n.inEdges[node].ForEach(func(edge E) {
@@ -279,15 +279,15 @@ func (n *MutableNetwork[N, E]) InEdges(node N) set.Set[E] {
 		// For undirected networks, all incident edges are both in and out
 		return n.IncidentEdges(node)
 	}
-	return result
+	return result, nil
 }
 
 // OutEdges returns all outgoing edges from a node
-func (n *MutableNetwork[N, E]) OutEdges(node N) set.Set[E] {
+func (n *MutableNetwork[N, E]) OutEdges(node N) (set.Set[E], error) {
 	if !n.nodes.Contains(node) {
-		panic(fmt.Sprintf("Node %v is not in the network", node))
+		return nil, common.NodeNotFoundError(node)
 	}
-	
+
 	result := set.New[E]()
 	if n.directed {
 		n.outEdges[node].ForEach(func(edge E) {
@@ -297,74 +297,74 @@ func (n *MutableNetwork[N, E]) OutEdges(node N) set.Set[E] {
 		// For undirected networks, all incident edges are both in and out
 		return n.IncidentEdges(node)
 	}
-	return result
+	return result, nil
 }
 
 // Degree returns the degree of a node
-func (n *MutableNetwork[N, E]) Degree(node N) int {
+func (n *MutableNetwork[N, E]) Degree(node N) (int, error) {
 	if !n.nodes.Contains(node) {
-		panic(fmt.Sprintf("Node %v is not in the network", node))
+		return 0, common.NodeNotFoundError(node)
 	}
-	
-	return n.nodeToEdges[node].Size()
+
+	return n.nodeToEdges[node].Size(), nil
 }
 
 // InDegree returns the in-degree of a node
-func (n *MutableNetwork[N, E]) InDegree(node N) int {
+func (n *MutableNetwork[N, E]) InDegree(node N) (int, error) {
 	if !n.nodes.Contains(node) {
-		panic(fmt.Sprintf("Node %v is not in the network", node))
+		return 0, common.NodeNotFoundError(node)
 	}
-	
+
 	if n.directed {
-		return n.inEdges[node].Size()
+		return n.inEdges[node].Size(), nil
 	}
-	return n.nodeToEdges[node].Size()
+	return n.nodeToEdges[node].Size(), nil
 }
 
 // OutDegree returns the out-degree of a node
-func (n *MutableNetwork[N, E]) OutDegree(node N) int {
+func (n *MutableNetwork[N, E]) OutDegree(node N) (int, error) {
 	if !n.nodes.Contains(node) {
-		panic(fmt.Sprintf("Node %v is not in the network", node))
+		return 0, common.NodeNotFoundError(node)
 	}
-	
+
 	if n.directed {
-		return n.outEdges[node].Size()
+		return n.outEdges[node].Size(), nil
 	}
-	return n.nodeToEdges[node].Size()
+	return n.nodeToEdges[node].Size(), nil
 }
 
 // IncidentNodes returns the nodes incident to an edge
-func (n *MutableNetwork[N, E]) IncidentNodes(edge E) EndpointPair[N] {
+func (n *MutableNetwork[N, E]) IncidentNodes(edge E) (EndpointPair[N], error) {
 	if !n.edges.Contains(edge) {
-		panic(fmt.Sprintf("Edge %v is not in the network", edge))
+		return EndpointPair[N]{}, fmt.Errorf("%w: %v", common.ErrEdgeNotFound, edge)
 	}
-	
-	return n.edgeToNodes[edge]
+
+	return n.edgeToNodes[edge], nil
 }
 
 // AdjacentEdges returns all edges adjacent to the given edge
-func (n *MutableNetwork[N, E]) AdjacentEdges(edge E) set.Set[E] {
+func (n *MutableNetwork[N, E]) AdjacentEdges(edge E) (set.Set[E], error) {
 	if !n.edges.Contains(edge) {
-		panic(fmt.Sprintf("Edge %v is not in the network", edge))
+		return nil, fmt.Errorf("%w: %v", common.ErrEdgeNotFound, edge)
 	}
-	
+
 	result := set.New[E]()
 	endpoints := n.edgeToNodes[edge]
-	
+
 	// Add all edges incident to the endpoints of this edge
 	n.nodeToEdges[endpoints.NodeU].ForEach(func(incidentEdge E) {
 		if incidentEdge != edge {
 			result.Add(incidentEdge)
 		}
 	})
-	
+
 	n.nodeToEdges[endpoints.NodeV].ForEach(func(incidentEdge E) {
 		if incidentEdge != edge {
 			result.Add(incidentEdge)
 		}
 	})
-	
-	return result
+
+	return result, nil
 }
 
 // EdgesConnecting returns all edges connecting two nodes
@@ -372,9 +372,9 @@ func (n *MutableNetwork[N, E]) EdgesConnecting(nodeU, nodeV N) set.Set[E] {
 	if !n.nodes.Contains(nodeU) || !n.nodes.Contains(nodeV) {
 		return set.New[E]()
 	}
-	
+
 	result := set.New[E]()
-	
+
 	n.nodeToEdges[nodeU].ForEach(func(edge E) {
 		endpoints := n.edgeToNodes[edge]
 		if (endpoints.NodeU == nodeU && endpoints.NodeV == nodeV) ||
@@ -382,7 +382,7 @@ func (n *MutableNetwork[N, E]) EdgesConnecting(nodeU, nodeV N) set.Set[E] {
 			result.Add(edge)
 		}
 	})
-	
+
 	return result
 }
 
@@ -440,16 +440,16 @@ func (n *MutableNetwork[N, E]) ForEach(fn func(N)) {
 func (n *MutableNetwork[N, E]) String() string {
 	var sb strings.Builder
 	sb.WriteString("Network{")
-	
+
 	if n.directed {
 		sb.WriteString("directed, ")
 	} else {
 		sb.WriteString("undirected, ")
 	}
-	
+
 	sb.WriteString(fmt.Sprintf("nodes=%d, edges=%d", n.Size(), n.edges.Size()))
 	sb.WriteString("}")
-	
+
 	return sb.String()
 }
 
@@ -487,10 +487,10 @@ func (g *networkAsGraph[N, E]) AddNode(node N) bool {
 	return g.network.AddNode(node)
 }
 
-func (g *networkAsGraph[N, E]) PutEdge(nodeU, nodeV N) bool {
+func (g *networkAsGraph[N, E]) PutEdge(nodeU, nodeV N) error {
 	// For the graph view, we need to create a synthetic edge
 	// This is a limitation of the adapter pattern
-	panic("Cannot add edges through Graph view of Network - use Network.AddEdge instead")
+	return common.InvalidOperationError("Cannot add edges through Graph view of Network", "use Network.AddEdge instead")
 }
 
 func (g *networkAsGraph[N, E]) RemoveNode(node N) bool {
@@ -503,43 +503,47 @@ func (g *networkAsGraph[N, E]) RemoveEdge(nodeU, nodeV N) bool {
 	if edges.IsEmpty() {
 		return false
 	}
-	
+
 	edges.ForEach(func(edge E) {
 		g.network.RemoveEdge(edge)
 	})
 	return true
 }
 
-func (g *networkAsGraph[N, E]) Successors(node N) set.Set[N] {
+func (g *networkAsGraph[N, E]) Successors(node N) (set.Set[N], error) {
 	return g.network.Successors(node)
 }
 
-func (g *networkAsGraph[N, E]) Predecessors(node N) set.Set[N] {
+func (g *networkAsGraph[N, E]) Predecessors(node N) (set.Set[N], error) {
 	return g.network.Predecessors(node)
 }
 
-func (g *networkAsGraph[N, E]) AdjacentNodes(node N) set.Set[N] {
+func (g *networkAsGraph[N, E]) AdjacentNodes(node N) (set.Set[N], error) {
 	return g.network.AdjacentNodes(node)
 }
 
-func (g *networkAsGraph[N, E]) IncidentEdges(node N) set.Set[EndpointPair[N]] {
+func (g *networkAsGraph[N, E]) IncidentEdges(node N) (set.Set[EndpointPair[N]], error) {
+	incidentEdges, err := g.network.IncidentEdges(node)
+	if err != nil {
+		return nil, err
+	}
 	result := set.New[EndpointPair[N]]()
-	g.network.IncidentEdges(node).ForEach(func(edge E) {
+	incidentEdges.ForEach(func(edge E) {
 		endpoints := g.network.edgeToNodes[edge]
 		result.Add(endpoints)
 	})
-	return result
+	return result, nil
 }
 
-func (g *networkAsGraph[N, E]) Degree(node N) int {
+func (g *networkAsGraph[N, E]) Degree(node N) (int, error) {
 	return g.network.Degree(node)
 }
 
-func (g *networkAsGraph[N, E]) InDegree(node N) int {
+func (g *networkAsGraph[N, E]) InDegree(node N) (int, error) {
 	return g.network.InDegree(node)
 }
 
-func (g *networkAsGraph[N, E]) OutDegree(node N) int {
+func (g *networkAsGraph[N, E]) OutDegree(node N) (int, error) {
 	return g.network.OutDegree(node)
 }
 

@@ -8,17 +8,22 @@ import (
 
 // Common error variables
 var (
-	ErrIndexOutOfBounds   = errors.New("index out of bounds")
-	ErrEmptyContainer     = errors.New("container is empty")
-	ErrFullContainer      = errors.New("container is full")
-	ErrInvalidRange       = errors.New("invalid range")
-	ErrNegativeCount      = errors.New("count cannot be negative")
-	ErrImmutableOperation = errors.New("operation not allowed on immutable collection")
-	ErrKeyNotFound        = errors.New("key not found")
-	ErrElementNotFound    = errors.New("element not found")
-	ErrDuplicateKey       = errors.New("duplicate key")
-	ErrInvalidArgument    = errors.New("invalid argument")
-	ErrConcurrentAccess   = errors.New("concurrent access violation")
+	ErrIndexOutOfBounds       = errors.New("index out of bounds")
+	ErrEmptyContainer         = errors.New("container is empty")
+	ErrFullContainer          = errors.New("container is full")
+	ErrInvalidRange           = errors.New("invalid range")
+	ErrNegativeCount          = errors.New("count cannot be negative")
+	ErrImmutableOperation     = errors.New("operation not allowed on immutable collection")
+	ErrKeyNotFound            = errors.New("key not found")
+	ErrElementNotFound        = errors.New("element not found")
+	ErrDuplicateKey           = errors.New("duplicate key")
+	ErrInvalidArgument        = errors.New("invalid argument")
+	ErrConcurrentAccess       = errors.New("concurrent access violation")
+	ErrNodeNotFound           = errors.New("node not found")
+	ErrEdgeNotFound           = errors.New("edge not found")
+	ErrSelfLoopNotAllowed     = errors.New("self-loops are not allowed")
+	ErrParallelEdgeNotAllowed = errors.New("parallel edges are not allowed")
+	ErrInvalidOperation       = errors.New("invalid operation")
 )
 
 // Error factory functions for specific error scenarios
@@ -78,4 +83,31 @@ func EmptyContainerError(containerType string) error {
 // FullContainerError creates a specific full container error with container type and capacity
 func FullContainerError(containerType string, capacity int) error {
 	return fmt.Errorf("%w: %s (capacity: %d)", ErrFullContainer, containerType, capacity)
+}
+
+// Graph-specific error factory functions
+
+// NodeNotFoundError creates a specific node not found error
+func NodeNotFoundError(node interface{}) error {
+	return fmt.Errorf("%w: %v", ErrNodeNotFound, node)
+}
+
+// EdgeNotFoundError creates a specific edge not found error
+func EdgeNotFoundError(nodeU, nodeV interface{}) error {
+	return fmt.Errorf("%w: %v -> %v", ErrEdgeNotFound, nodeU, nodeV)
+}
+
+// SelfLoopNotAllowedError creates a specific self-loop not allowed error
+func SelfLoopNotAllowedError(node interface{}) error {
+	return fmt.Errorf("%w: node %v", ErrSelfLoopNotAllowed, node)
+}
+
+// ParallelEdgeNotAllowedError creates a specific parallel edge not allowed error
+func ParallelEdgeNotAllowedError(nodeU, nodeV interface{}) error {
+	return fmt.Errorf("%w: %v -> %v", ErrParallelEdgeNotAllowed, nodeU, nodeV)
+}
+
+// InvalidOperationError creates a specific invalid operation error
+func InvalidOperationError(operation, reason string) error {
+	return fmt.Errorf("%w: %s - %s", ErrInvalidOperation, operation, reason)
 }

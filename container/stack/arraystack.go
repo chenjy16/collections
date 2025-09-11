@@ -4,6 +4,7 @@ package stack
 import (
 	"fmt"
 	"strings"
+
 	"github.com/chenjianyu/collections/container/common"
 )
 
@@ -55,9 +56,18 @@ func (s *ArrayStack[E]) isFull() bool {
 	return s.maxCap > 0 && len(s.elements) >= s.maxCap
 }
 
-// Clear empties the stack
+// Clear empties the stack and releases memory by setting elements to zero values
 func (s *ArrayStack[E]) Clear() {
-	s.elements = s.elements[:0]
+	// Clear all elements to prevent memory leaks
+	for i := range s.elements {
+		s.elements[i] = common.ZeroValue[E]()
+	}
+	// Reset the slice to zero length but keep some capacity for reuse
+	if cap(s.elements) > 100 { // Only shrink if capacity is large
+		s.elements = make([]E, 0, 16) // Reset to smaller capacity
+	} else {
+		s.elements = s.elements[:0]
+	}
 }
 
 // Contains checks if the stack contains the specified element
@@ -108,12 +118,13 @@ func (s *ArrayStack[E]) Push(element E) error {
 // Pop removes and returns the element at the top of the stack
 func (s *ArrayStack[E]) Pop() (E, error) {
 	if s.IsEmpty() {
-		var zero E
-		return zero, common.EmptyContainerError("ArrayStack")
+		return common.ZeroValue[E](), common.EmptyContainerError("ArrayStack")
 	}
 
 	index := len(s.elements) - 1
 	element := s.elements[index]
+	// Clear the element to prevent memory leak
+	s.elements[index] = common.ZeroValue[E]()
 	s.elements = s.elements[:index]
 	return element, nil
 }
@@ -121,8 +132,7 @@ func (s *ArrayStack[E]) Pop() (E, error) {
 // Peek returns the element at the top of the stack without removing it
 func (s *ArrayStack[E]) Peek() (E, error) {
 	if s.IsEmpty() {
-		var zero E
-		return zero, common.EmptyContainerError("ArrayStack")
+		return common.ZeroValue[E](), common.EmptyContainerError("ArrayStack")
 	}
 	return s.elements[len(s.elements)-1], nil
 }

@@ -47,11 +47,11 @@ func (g *MutableValueGraph[N, V]) Nodes() set.Set[N] {
 // Edges returns all edges in this graph as endpoint pairs
 func (g *MutableValueGraph[N, V]) Edges() set.Set[EndpointPair[N]] {
 	result := set.New[EndpointPair[N]]()
-	
+
 	for edge := range g.edgeValues {
 		result.Add(edge)
 	}
-	
+
 	return result
 }
 
@@ -75,7 +75,7 @@ func (g *MutableValueGraph[N, V]) AddNode(node N) bool {
 	if g.nodes.Contains(node) {
 		return false
 	}
-	
+
 	g.nodes.Add(node)
 	g.adjacencyMap[node] = set.New[N]()
 	if g.directed {
@@ -85,10 +85,13 @@ func (g *MutableValueGraph[N, V]) AddNode(node N) bool {
 }
 
 // PutEdge adds an edge between two nodes
-func (g *MutableValueGraph[N, V]) PutEdge(nodeU, nodeV N) bool {
+func (g *MutableValueGraph[N, V]) PutEdge(nodeU, nodeV N) error {
 	var zeroValue V
 	_, existed := g.PutEdgeValue(nodeU, nodeV, zeroValue)
-	return !existed
+	if existed {
+		return nil // Edge already existed
+	}
+	return nil
 }
 
 // RemoveNode removes a node and all its incident edges
@@ -96,27 +99,27 @@ func (g *MutableValueGraph[N, V]) RemoveNode(node N) bool {
 	if !g.nodes.Contains(node) {
 		return false
 	}
-	
+
 	// Remove all edges incident to this node
 	successors := g.adjacencyMap[node]
 	successors.ForEach(func(successor N) {
 		g.RemoveEdge(node, successor)
 	})
-	
+
 	if g.directed {
 		predecessors := g.predecessorMap[node]
 		predecessors.ForEach(func(predecessor N) {
 			g.RemoveEdge(predecessor, node)
 		})
 	}
-	
+
 	// Remove the node itself
 	g.nodes.Remove(node)
 	delete(g.adjacencyMap, node)
 	if g.directed {
 		delete(g.predecessorMap, node)
 	}
-	
+
 	return true
 }
 
@@ -125,7 +128,7 @@ func (g *MutableValueGraph[N, V]) RemoveEdge(nodeU, nodeV N) bool {
 	if !g.nodes.Contains(nodeU) || !g.nodes.Contains(nodeV) {
 		return false
 	}
-	
+
 	edge := NewEndpointPair(nodeU, nodeV)
 	if _, exists := g.edgeValues[edge]; !exists {
 		if !g.directed {
@@ -139,7 +142,7 @@ func (g *MutableValueGraph[N, V]) RemoveEdge(nodeU, nodeV N) bool {
 			return false
 		}
 	}
-	
+
 	delete(g.edgeValues, edge)
 	g.adjacencyMap[nodeU].Remove(nodeV)
 	if g.directed {
@@ -147,29 +150,29 @@ func (g *MutableValueGraph[N, V]) RemoveEdge(nodeU, nodeV N) bool {
 	} else {
 		g.adjacencyMap[nodeV].Remove(nodeU)
 	}
-	
+
 	return true
 }
 
 // Successors returns the successors of a node
-func (g *MutableValueGraph[N, V]) Successors(node N) set.Set[N] {
+func (g *MutableValueGraph[N, V]) Successors(node N) (set.Set[N], error) {
 	if !g.nodes.Contains(node) {
-		panic(fmt.Sprintf("Node %v is not in the graph", node))
+		return nil, common.NodeNotFoundError(node)
 	}
-	
+
 	result := set.New[N]()
 	g.adjacencyMap[node].ForEach(func(successor N) {
 		result.Add(successor)
 	})
-	return result
+	return result, nil
 }
 
 // Predecessors returns the predecessors of a node
-func (g *MutableValueGraph[N, V]) Predecessors(node N) set.Set[N] {
+func (g *MutableValueGraph[N, V]) Predecessors(node N) (set.Set[N], error) {
 	if !g.nodes.Contains(node) {
-		panic(fmt.Sprintf("Node %v is not in the graph", node))
+		return nil, common.NodeNotFoundError(node)
 	}
-	
+
 	result := set.New[N]()
 	if g.directed {
 		g.predecessorMap[node].ForEach(func(predecessor N) {
@@ -181,80 +184,82 @@ func (g *MutableValueGraph[N, V]) Predecessors(node N) set.Set[N] {
 			result.Add(adjacent)
 		})
 	}
-	return result
+	return result, nil
 }
 
 // AdjacentNodes returns all nodes adjacent to the given node
-func (g *MutableValueGraph[N, V]) AdjacentNodes(node N) set.Set[N] {
+func (g *MutableValueGraph[N, V]) AdjacentNodes(node N) (set.Set[N], error) {
 	if !g.nodes.Contains(node) {
-		panic(fmt.Sprintf("Node %v is not in the graph", node))
+		return nil, common.NodeNotFoundError(node)
 	}
-	
+
 	result := set.New[N]()
-	
+
 	// Add successors
 	g.adjacencyMap[node].ForEach(func(successor N) {
 		result.Add(successor)
 	})
-	
+
 	// Add predecessors (for directed graphs, they might be different)
 	if g.directed {
 		g.predecessorMap[node].ForEach(func(predecessor N) {
 			result.Add(predecessor)
 		})
 	}
-	
-	return result
+
+	return result, nil
 }
 
 // IncidentEdges returns all edges incident to the given node
-func (g *MutableValueGraph[N, V]) IncidentEdges(node N) set.Set[EndpointPair[N]] {
+func (g *MutableValueGraph[N, V]) IncidentEdges(node N) (set.Set[EndpointPair[N]], error) {
 	if !g.nodes.Contains(node) {
-		panic(fmt.Sprintf("Node %v is not in the graph", node))
+		return nil, common.NodeNotFoundError(node)
 	}
-	
+
 	result := set.New[EndpointPair[N]]()
-	
+
 	for edge := range g.edgeValues {
 		if edge.NodeU == node || edge.NodeV == node {
 			result.Add(edge)
 		}
 	}
-	
-	return result
+
+	return result, nil
 }
 
 // Degree returns the degree of a node
-func (g *MutableValueGraph[N, V]) Degree(node N) int {
+func (g *MutableValueGraph[N, V]) Degree(node N) (int, error) {
 	if !g.nodes.Contains(node) {
-		panic(fmt.Sprintf("Node %v is not in the graph", node))
+		return 0, common.NodeNotFoundError(node)
 	}
-	
+
 	if g.directed {
-		return g.InDegree(node) + g.OutDegree(node)
+		inDegree, _ := g.InDegree(node)
+		outDegree, _ := g.OutDegree(node)
+		return inDegree + outDegree, nil
 	}
-	return g.adjacencyMap[node].Size()
+	return g.adjacencyMap[node].Size(), nil
 }
 
 // InDegree returns the in-degree of a node
-func (g *MutableValueGraph[N, V]) InDegree(node N) int {
+func (g *MutableValueGraph[N, V]) InDegree(node N) (int, error) {
 	if !g.nodes.Contains(node) {
-		panic(fmt.Sprintf("Node %v is not in the graph", node))
+		return 0, common.NodeNotFoundError(node)
 	}
-	
+
 	if g.directed {
-		return g.predecessorMap[node].Size()
+		return g.predecessorMap[node].Size(), nil
 	}
-	return g.adjacencyMap[node].Size()
+	return g.adjacencyMap[node].Size(), nil
 }
 
 // OutDegree returns the out-degree of a node
-func (g *MutableValueGraph[N, V]) OutDegree(node N) int {
+func (g *MutableValueGraph[N, V]) OutDegree(node N) (int, error) {
 	if !g.nodes.Contains(node) {
-		panic(fmt.Sprintf("Node %v is not in the graph", node))
+		return 0, common.NodeNotFoundError(node)
 	}
-	
-	return g.adjacencyMap[node].Size()
+
+	return g.adjacencyMap[node].Size(), nil
 }
 
 // HasEdgeConnecting returns true if there's an edge between two nodes
@@ -262,35 +267,35 @@ func (g *MutableValueGraph[N, V]) HasEdgeConnecting(nodeU, nodeV N) bool {
 	if !g.nodes.Contains(nodeU) || !g.nodes.Contains(nodeV) {
 		return false
 	}
-	
+
 	edge := NewEndpointPair(nodeU, nodeV)
 	if _, exists := g.edgeValues[edge]; exists {
 		return true
 	}
-	
+
 	if !g.directed {
 		// Check reverse edge for undirected graphs
 		reverseEdge := NewEndpointPair(nodeV, nodeU)
 		_, exists := g.edgeValues[reverseEdge]
 		return exists
 	}
-	
+
 	return false
 }
 
 // EdgeValue returns the value associated with an edge
 func (g *MutableValueGraph[N, V]) EdgeValue(nodeU, nodeV N) (V, bool) {
 	var zeroValue V
-	
+
 	if !g.nodes.Contains(nodeU) || !g.nodes.Contains(nodeV) {
 		return zeroValue, false
 	}
-	
+
 	edge := NewEndpointPair(nodeU, nodeV)
 	if value, exists := g.edgeValues[edge]; exists {
 		return value, true
 	}
-	
+
 	if !g.directed {
 		// Check reverse edge for undirected graphs
 		reverseEdge := NewEndpointPair(nodeV, nodeU)
@@ -298,7 +303,7 @@ func (g *MutableValueGraph[N, V]) EdgeValue(nodeU, nodeV N) (V, bool) {
 			return value, true
 		}
 	}
-	
+
 	return zeroValue, false
 }
 
@@ -313,24 +318,24 @@ func (g *MutableValueGraph[N, V]) EdgeValueOrDefault(nodeU, nodeV N, defaultValu
 // PutEdgeValue adds an edge with a value
 func (g *MutableValueGraph[N, V]) PutEdgeValue(nodeU, nodeV N, value V) (V, bool) {
 	var zeroValue V
-	
+
 	// Check self-loop constraint
 	if !g.allowSelfLoops && nodeU == nodeV {
-		panic("Self-loops are not allowed in this graph")
+		return zeroValue, false
 	}
-	
+
 	// Add nodes if they don't exist
 	g.AddNode(nodeU)
 	g.AddNode(nodeV)
-	
+
 	edge := NewEndpointPair(nodeU, nodeV)
-	
+
 	// Check if edge already exists
 	if existingValue, exists := g.edgeValues[edge]; exists {
 		g.edgeValues[edge] = value
 		return existingValue, true
 	}
-	
+
 	// For undirected graphs, check if reverse edge exists
 	if !g.directed {
 		reverseEdge := NewEndpointPair(nodeV, nodeU)
@@ -339,7 +344,7 @@ func (g *MutableValueGraph[N, V]) PutEdgeValue(nodeU, nodeV N, value V) (V, bool
 			return existingValue, true
 		}
 	}
-	
+
 	// Add new edge
 	g.edgeValues[edge] = value
 	g.adjacencyMap[nodeU].Add(nodeV)
@@ -348,7 +353,7 @@ func (g *MutableValueGraph[N, V]) PutEdgeValue(nodeU, nodeV N, value V) (V, bool
 	} else {
 		g.adjacencyMap[nodeV].Add(nodeU)
 	}
-	
+
 	return zeroValue, false
 }
 
@@ -399,16 +404,16 @@ func (g *MutableValueGraph[N, V]) ForEach(fn func(N)) {
 func (g *MutableValueGraph[N, V]) String() string {
 	var sb strings.Builder
 	sb.WriteString("ValueGraph{")
-	
+
 	if g.directed {
 		sb.WriteString("directed, ")
 	} else {
 		sb.WriteString("undirected, ")
 	}
-	
+
 	sb.WriteString(fmt.Sprintf("nodes=%d, edges=%d", g.Size(), len(g.edgeValues)))
 	sb.WriteString("}")
-	
+
 	return sb.String()
 }
 
@@ -441,7 +446,7 @@ func (g *valueGraphAsGraph[N, V]) AddNode(node N) bool {
 	return g.valueGraph.AddNode(node)
 }
 
-func (g *valueGraphAsGraph[N, V]) PutEdge(nodeU, nodeV N) bool {
+func (g *valueGraphAsGraph[N, V]) PutEdge(nodeU, nodeV N) error {
 	return g.valueGraph.PutEdge(nodeU, nodeV)
 }
 
@@ -453,31 +458,31 @@ func (g *valueGraphAsGraph[N, V]) RemoveEdge(nodeU, nodeV N) bool {
 	return g.valueGraph.RemoveEdge(nodeU, nodeV)
 }
 
-func (g *valueGraphAsGraph[N, V]) Successors(node N) set.Set[N] {
+func (g *valueGraphAsGraph[N, V]) Successors(node N) (set.Set[N], error) {
 	return g.valueGraph.Successors(node)
 }
 
-func (g *valueGraphAsGraph[N, V]) Predecessors(node N) set.Set[N] {
+func (g *valueGraphAsGraph[N, V]) Predecessors(node N) (set.Set[N], error) {
 	return g.valueGraph.Predecessors(node)
 }
 
-func (g *valueGraphAsGraph[N, V]) AdjacentNodes(node N) set.Set[N] {
+func (g *valueGraphAsGraph[N, V]) AdjacentNodes(node N) (set.Set[N], error) {
 	return g.valueGraph.AdjacentNodes(node)
 }
 
-func (g *valueGraphAsGraph[N, V]) IncidentEdges(node N) set.Set[EndpointPair[N]] {
+func (g *valueGraphAsGraph[N, V]) IncidentEdges(node N) (set.Set[EndpointPair[N]], error) {
 	return g.valueGraph.IncidentEdges(node)
 }
 
-func (g *valueGraphAsGraph[N, V]) Degree(node N) int {
+func (g *valueGraphAsGraph[N, V]) Degree(node N) (int, error) {
 	return g.valueGraph.Degree(node)
 }
 
-func (g *valueGraphAsGraph[N, V]) InDegree(node N) int {
+func (g *valueGraphAsGraph[N, V]) InDegree(node N) (int, error) {
 	return g.valueGraph.InDegree(node)
 }
 
-func (g *valueGraphAsGraph[N, V]) OutDegree(node N) int {
+func (g *valueGraphAsGraph[N, V]) OutDegree(node N) (int, error) {
 	return g.valueGraph.OutDegree(node)
 }
 

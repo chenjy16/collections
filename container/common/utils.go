@@ -397,3 +397,10 @@ func NewPair[K, V any](key K, value V) Pair[K, V] {
 func (p Pair[K, V]) String() string {
 	return fmt.Sprintf("(%v, %v)", p.Key, p.Value)
 }
+
+// ZeroValue returns the zero value of type T
+// This is a cleaner alternative to *new(T)
+func ZeroValue[T any]() T {
+	var zero T
+	return zero
+}

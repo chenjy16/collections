@@ -52,8 +52,8 @@ type Graph[N comparable] interface {
 	AddNode(node N) bool
 
 	// PutEdge adds an edge between two nodes
-	// Returns true if the edge was added, false if it already existed
-	PutEdge(nodeU, nodeV N) bool
+	// Returns error if operation is not allowed (e.g., self-loops not allowed)
+	PutEdge(nodeU, nodeV N) error
 
 	// RemoveNode removes a node and all its incident edges
 	// Returns true if the node was removed, false if it didn't exist
@@ -64,25 +64,32 @@ type Graph[N comparable] interface {
 	RemoveEdge(nodeU, nodeV N) bool
 
 	// Successors returns the successors of a node
-	Successors(node N) set.Set[N]
+	// Returns error if node is not in the graph
+	Successors(node N) (set.Set[N], error)
 
 	// Predecessors returns the predecessors of a node
-	Predecessors(node N) set.Set[N]
+	// Returns error if node is not in the graph
+	Predecessors(node N) (set.Set[N], error)
 
 	// AdjacentNodes returns all nodes adjacent to the given node
-	AdjacentNodes(node N) set.Set[N]
+	// Returns error if node is not in the graph
+	AdjacentNodes(node N) (set.Set[N], error)
 
 	// IncidentEdges returns all edges incident to the given node
-	IncidentEdges(node N) set.Set[EndpointPair[N]]
+	// Returns error if node is not in the graph
+	IncidentEdges(node N) (set.Set[EndpointPair[N]], error)
 
 	// Degree returns the degree of a node (number of incident edges)
-	Degree(node N) int
+	// Returns error if node is not in the graph
+	Degree(node N) (int, error)
 
 	// InDegree returns the in-degree of a node (for directed graphs)
-	InDegree(node N) int
+	// Returns error if node is not in the graph
+	InDegree(node N) (int, error)
 
 	// OutDegree returns the out-degree of a node (for directed graphs)
-	OutDegree(node N) int
+	// Returns error if node is not in the graph
+	OutDegree(node N) (int, error)
 
 	// HasEdgeConnecting returns true if there's an edge between two nodes
 	HasEdgeConnecting(nodeU, nodeV N) bool
@@ -141,8 +148,8 @@ type Network[N comparable, E comparable] interface {
 	AddNode(node N) bool
 
 	// AddEdge adds an edge between two nodes
-	// Returns true if the edge was added, false if it already existed
-	AddEdge(edge E, nodeU, nodeV N) bool
+	// Returns error if operation is not allowed (e.g., self-loops or parallel edges not allowed)
+	AddEdge(edge E, nodeU, nodeV N) error
 
 	// RemoveNode removes a node and all its incident edges
 	// Returns true if the node was removed, false if it didn't exist
@@ -153,37 +160,48 @@ type Network[N comparable, E comparable] interface {
 	RemoveEdge(edge E) bool
 
 	// Successors returns the successors of a node
-	Successors(node N) set.Set[N]
+	// Returns error if node is not in the network
+	Successors(node N) (set.Set[N], error)
 
 	// Predecessors returns the predecessors of a node
-	Predecessors(node N) set.Set[N]
+	// Returns error if node is not in the network
+	Predecessors(node N) (set.Set[N], error)
 
 	// AdjacentNodes returns all nodes adjacent to the given node
-	AdjacentNodes(node N) set.Set[N]
+	// Returns error if node is not in the network
+	AdjacentNodes(node N) (set.Set[N], error)
 
 	// IncidentEdges returns all edges incident to the given node
-	IncidentEdges(node N) set.Set[E]
+	// Returns error if node is not in the network
+	IncidentEdges(node N) (set.Set[E], error)
 
 	// InEdges returns all incoming edges to a node (for directed networks)
-	InEdges(node N) set.Set[E]
+	// Returns error if node is not in the network
+	InEdges(node N) (set.Set[E], error)
 
 	// OutEdges returns all outgoing edges from a node (for directed networks)
-	OutEdges(node N) set.Set[E]
+	// Returns error if node is not in the network
+	OutEdges(node N) (set.Set[E], error)
 
 	// Degree returns the degree of a node (number of incident edges)
-	Degree(node N) int
+	// Returns error if node is not in the network
+	Degree(node N) (int, error)
 
 	// InDegree returns the in-degree of a node (for directed networks)
-	InDegree(node N) int
+	// Returns error if node is not in the network
+	InDegree(node N) (int, error)
 
 	// OutDegree returns the out-degree of a node (for directed networks)
-	OutDegree(node N) int
+	// Returns error if node is not in the network
+	OutDegree(node N) (int, error)
 
 	// IncidentNodes returns the nodes incident to an edge
-	IncidentNodes(edge E) EndpointPair[N]
+	// Returns error if edge is not in the network
+	IncidentNodes(edge E) (EndpointPair[N], error)
 
 	// AdjacentEdges returns all edges adjacent to the given edge
-	AdjacentEdges(edge E) set.Set[E]
+	// Returns error if edge is not in the network
+	AdjacentEdges(edge E) (set.Set[E], error)
 
 	// EdgesConnecting returns all edges connecting two nodes
 	EdgesConnecting(nodeU, nodeV N) set.Set[E]

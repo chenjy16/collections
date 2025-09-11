@@ -44,7 +44,7 @@ func (g *MutableGraph[N]) Nodes() set.Set[N] {
 // Edges returns all edges in this graph as endpoint pairs
 func (g *MutableGraph[N]) Edges() set.Set[EndpointPair[N]] {
 	result := set.New[EndpointPair[N]]()
-	
+
 	for node, successors := range g.adjacencyMap {
 		successors.ForEach(func(successor N) {
 			if g.directed {
@@ -58,7 +58,7 @@ func (g *MutableGraph[N]) Edges() set.Set[EndpointPair[N]] {
 			}
 		})
 	}
-	
+
 	return result
 }
 
@@ -82,7 +82,7 @@ func (g *MutableGraph[N]) AddNode(node N) bool {
 	if g.nodes.Contains(node) {
 		return false
 	}
-	
+
 	g.nodes.Add(node)
 	g.adjacencyMap[node] = set.New[N]()
 	if g.directed {
@@ -92,21 +92,21 @@ func (g *MutableGraph[N]) AddNode(node N) bool {
 }
 
 // PutEdge adds an edge between two nodes
-func (g *MutableGraph[N]) PutEdge(nodeU, nodeV N) bool {
+func (g *MutableGraph[N]) PutEdge(nodeU, nodeV N) error {
 	// Check self-loop constraint
 	if !g.allowSelfLoops && nodeU == nodeV {
-		panic("Self-loops are not allowed in this graph")
+		return common.SelfLoopNotAllowedError(nodeU)
 	}
-	
+
 	// Add nodes if they don't exist
 	g.AddNode(nodeU)
 	g.AddNode(nodeV)
-	
+
 	// Check if edge already exists
 	if g.adjacencyMap[nodeU].Contains(nodeV) {
-		return false
+		return nil // Edge already exists, no error
 	}
-	
+
 	// Add edge
 	g.adjacencyMap[nodeU].Add(nodeV)
 	if g.directed {
@@ -115,8 +115,8 @@ func (g *MutableGraph[N]) PutEdge(nodeU, nodeV N) bool {
 		// For undirected graphs, add both directions
 		g.adjacencyMap[nodeV].Add(nodeU)
 	}
-	
-	return true
+
+	return nil
 }
 
 // RemoveNode removes a node and all its incident edges
@@ -124,27 +124,27 @@ func (g *MutableGraph[N]) RemoveNode(node N) bool {
 	if !g.nodes.Contains(node) {
 		return false
 	}
-	
+
 	// Remove all edges incident to this node
 	successors := g.adjacencyMap[node]
 	successors.ForEach(func(successor N) {
 		g.RemoveEdge(node, successor)
 	})
-	
+
 	if g.directed {
 		predecessors := g.predecessorMap[node]
 		predecessors.ForEach(func(predecessor N) {
 			g.RemoveEdge(predecessor, node)
 		})
 	}
-	
+
 	// Remove the node itself
 	g.nodes.Remove(node)
 	delete(g.adjacencyMap, node)
 	if g.directed {
 		delete(g.predecessorMap, node)
 	}
-	
+
 	return true
 }
 
@@ -153,40 +153,40 @@ func (g *MutableGraph[N]) RemoveEdge(nodeU, nodeV N) bool {
 	if !g.nodes.Contains(nodeU) || !g.nodes.Contains(nodeV) {
 		return false
 	}
-	
+
 	if !g.adjacencyMap[nodeU].Contains(nodeV) {
 		return false
 	}
-	
+
 	g.adjacencyMap[nodeU].Remove(nodeV)
 	if g.directed {
 		g.predecessorMap[nodeV].Remove(nodeU)
 	} else {
 		g.adjacencyMap[nodeV].Remove(nodeU)
 	}
-	
+
 	return true
 }
 
 // Successors returns the successors of a node
-func (g *MutableGraph[N]) Successors(node N) set.Set[N] {
+func (g *MutableGraph[N]) Successors(node N) (set.Set[N], error) {
 	if !g.nodes.Contains(node) {
-		panic(fmt.Sprintf("Node %v is not in the graph", node))
+		return nil, common.NodeNotFoundError(node)
 	}
-	
+
 	result := set.New[N]()
 	g.adjacencyMap[node].ForEach(func(successor N) {
 		result.Add(successor)
 	})
-	return result
+	return result, nil
 }
 
 // Predecessors returns the predecessors of a node
-func (g *MutableGraph[N]) Predecessors(node N) set.Set[N] {
+func (g *MutableGraph[N]) Predecessors(node N) (set.Set[N], error) {
 	if !g.nodes.Contains(node) {
-		panic(fmt.Sprintf("Node %v is not in the graph", node))
+		return nil, common.NodeNotFoundError(node)
 	}
-	
+
 	result := set.New[N]()
 	if g.directed {
 		g.predecessorMap[node].ForEach(func(predecessor N) {
@@ -198,86 +198,88 @@ func (g *MutableGraph[N]) Predecessors(node N) set.Set[N] {
 			result.Add(adjacent)
 		})
 	}
-	return result
+	return result, nil
 }
 
 // AdjacentNodes returns all nodes adjacent to the given node
-func (g *MutableGraph[N]) AdjacentNodes(node N) set.Set[N] {
+func (g *MutableGraph[N]) AdjacentNodes(node N) (set.Set[N], error) {
 	if !g.nodes.Contains(node) {
-		panic(fmt.Sprintf("Node %v is not in the graph", node))
+		return nil, common.NodeNotFoundError(node)
 	}
-	
+
 	result := set.New[N]()
-	
+
 	// Add successors
 	g.adjacencyMap[node].ForEach(func(successor N) {
 		result.Add(successor)
 	})
-	
+
 	// Add predecessors (for directed graphs, they might be different)
 	if g.directed {
 		g.predecessorMap[node].ForEach(func(predecessor N) {
 			result.Add(predecessor)
 		})
 	}
-	
-	return result
+
+	return result, nil
 }
 
 // IncidentEdges returns all edges incident to the given node
-func (g *MutableGraph[N]) IncidentEdges(node N) set.Set[EndpointPair[N]] {
+func (g *MutableGraph[N]) IncidentEdges(node N) (set.Set[EndpointPair[N]], error) {
 	if !g.nodes.Contains(node) {
-		panic(fmt.Sprintf("Node %v is not in the graph", node))
+		return nil, common.NodeNotFoundError(node)
 	}
-	
+
 	result := set.New[EndpointPair[N]]()
-	
+
 	// Add outgoing edges
 	g.adjacencyMap[node].ForEach(func(successor N) {
 		result.Add(NewEndpointPair(node, successor))
 	})
-	
+
 	// Add incoming edges (for directed graphs)
 	if g.directed {
 		g.predecessorMap[node].ForEach(func(predecessor N) {
 			result.Add(NewEndpointPair(predecessor, node))
 		})
 	}
-	
-	return result
+
+	return result, nil
 }
 
 // Degree returns the degree of a node
-func (g *MutableGraph[N]) Degree(node N) int {
+func (g *MutableGraph[N]) Degree(node N) (int, error) {
 	if !g.nodes.Contains(node) {
-		panic(fmt.Sprintf("Node %v is not in the graph", node))
+		return 0, common.NodeNotFoundError(node)
 	}
-	
+
 	if g.directed {
-		return g.InDegree(node) + g.OutDegree(node)
+		inDegree, _ := g.InDegree(node)
+		outDegree, _ := g.OutDegree(node)
+		return inDegree + outDegree, nil
 	}
-	return g.adjacencyMap[node].Size()
+	return g.adjacencyMap[node].Size(), nil
 }
 
 // InDegree returns the in-degree of a node
-func (g *MutableGraph[N]) InDegree(node N) int {
+func (g *MutableGraph[N]) InDegree(node N) (int, error) {
 	if !g.nodes.Contains(node) {
-		panic(fmt.Sprintf("Node %v is not in the graph", node))
+		return 0, common.NodeNotFoundError(node)
 	}
-	
+
 	if g.directed {
-		return g.predecessorMap[node].Size()
+		return g.predecessorMap[node].Size(), nil
 	}
-	return g.adjacencyMap[node].Size()
+	return g.adjacencyMap[node].Size(), nil
 }
 
 // OutDegree returns the out-degree of a node
-func (g *MutableGraph[N]) OutDegree(node N) int {
+func (g *MutableGraph[N]) OutDegree(node N) (int, error) {
 	if !g.nodes.Contains(node) {
-		panic(fmt.Sprintf("Node %v is not in the graph", node))
+		return 0, common.NodeNotFoundError(node)
 	}
-	
-	return g.adjacencyMap[node].Size()
+
+	return g.adjacencyMap[node].Size(), nil
 }
 
 // HasEdgeConnecting returns true if there's an edge between two nodes
@@ -285,7 +287,7 @@ func (g *MutableGraph[N]) HasEdgeConnecting(nodeU, nodeV N) bool {
 	if !g.nodes.Contains(nodeU) || !g.nodes.Contains(nodeV) {
 		return false
 	}
-	
+
 	return g.adjacencyMap[nodeU].Contains(nodeV)
 }
 
@@ -330,15 +332,15 @@ func (g *MutableGraph[N]) ForEach(fn func(N)) {
 func (g *MutableGraph[N]) String() string {
 	var sb strings.Builder
 	sb.WriteString("Graph{")
-	
+
 	if g.directed {
 		sb.WriteString("directed, ")
 	} else {
 		sb.WriteString("undirected, ")
 	}
-	
+
 	sb.WriteString(fmt.Sprintf("nodes=%d, edges=%d", g.Size(), g.Edges().Size()))
 	sb.WriteString("}")
-	
+
 	return sb.String()
 }
