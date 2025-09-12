@@ -3,7 +3,6 @@ package set
 
 import (
 	"fmt"
-	"hash/fnv"
 	"strings"
 
 	"github.com/chenjianyu/collections/container/common"
@@ -19,42 +18,54 @@ type linkedHashSetNode[E comparable] struct {
 // LinkedHashSet is a Set implementation that maintains insertion order
 // It combines the fast lookup of a hash table with the ordering of a linked list
 type LinkedHashSet[E comparable] struct {
-	buckets [][]E                         // Hash table for fast lookup
-	nodeMap map[E]*linkedHashSetNode[E]   // Map from element to node for O(1) access
-	head    *linkedHashSetNode[E]         // Head of the doubly linked list
-	tail    *linkedHashSetNode[E]         // Tail of the doubly linked list
-	size    int
+	buckets      [][]E                       // Hash table for fast lookup
+	nodeMap      map[E]*linkedHashSetNode[E] // Map from element to node for O(1) access
+	head         *linkedHashSetNode[E]       // Head of the doubly linked list
+	tail         *linkedHashSetNode[E]       // Tail of the doubly linked list
+	size         int
+	hashStrategy common.HashStrategy[E] // Custom hash strategy
 }
 
-// NewLinkedHashSet creates a new LinkedHashSet
+// NewLinkedHashSet creates a new LinkedHashSet with default hash strategy
 func NewLinkedHashSet[E comparable]() *LinkedHashSet[E] {
+	return NewLinkedHashSetWithHashStrategy(common.NewComparableHashStrategy[E]())
+}
+
+// NewLinkedHashSetWithHashStrategy creates a new LinkedHashSet with custom hash strategy
+func NewLinkedHashSetWithHashStrategy[E comparable](hashStrategy common.HashStrategy[E]) *LinkedHashSet[E] {
 	return &LinkedHashSet[E]{
-		buckets: make([][]E, 16),
-		nodeMap: make(map[E]*linkedHashSetNode[E]),
+		buckets:      make([][]E, 16),
+		nodeMap:      make(map[E]*linkedHashSetNode[E]),
+		hashStrategy: hashStrategy,
 	}
 }
 
-// LinkedHashSetFromSlice creates a new LinkedHashSet from a slice
+// LinkedHashSetFromSlice creates a new LinkedHashSet from a slice with default hash strategy
 func LinkedHashSetFromSlice[E comparable](slice []E) *LinkedHashSet[E] {
-	set := NewLinkedHashSet[E]()
+	return LinkedHashSetFromSliceWithHashStrategy(slice, common.NewComparableHashStrategy[E]())
+}
+
+// LinkedHashSetFromSliceWithHashStrategy creates a new LinkedHashSet from a slice with custom hash strategy
+func LinkedHashSetFromSliceWithHashStrategy[E comparable](slice []E, hashStrategy common.HashStrategy[E]) *LinkedHashSet[E] {
+	set := NewLinkedHashSetWithHashStrategy(hashStrategy)
 	for _, element := range slice {
 		set.Add(element)
 	}
 	return set
 }
 
-// hash computes the hash value for an element
+// hash computes the hash value for an element using the hash strategy
 func (s *LinkedHashSet[E]) hash(element E) uint32 {
-	h := fnv.New32a()
-	h.Write([]byte(fmt.Sprintf("%v", element)))
-	return h.Sum32()
+	return uint32(s.hashStrategy.Hash(element))
 }
 
 // Add adds an element to the set
 func (s *LinkedHashSet[E]) Add(element E) bool {
-	// Check if element already exists
-	if _, exists := s.nodeMap[element]; exists {
-		return false
+	// Check if element already exists using hash strategy
+	for existingElement := range s.nodeMap {
+		if s.hashStrategy.Equals(existingElement, element) {
+			return false
+		}
 	}
 
 	// Add to hash table
@@ -88,36 +99,49 @@ func (s *LinkedHashSet[E]) Add(element E) bool {
 
 // Remove removes the specified element from the set
 func (s *LinkedHashSet[E]) Remove(element E) bool {
-	node, exists := s.nodeMap[element]
-	if !exists {
+	// Find the element using hash strategy
+	var nodeToRemove *linkedHashSetNode[E]
+	var keyToRemove E
+	found := false
+
+	for existingElement, node := range s.nodeMap {
+		if s.hashStrategy.Equals(existingElement, element) {
+			nodeToRemove = node
+			keyToRemove = existingElement
+			found = true
+			break
+		}
+	}
+
+	if !found {
 		return false
 	}
 
 	// Remove from hash table
-	index := s.hash(element) % uint32(len(s.buckets))
+	index := s.hash(keyToRemove) % uint32(len(s.buckets))
 	bucket := s.buckets[index]
 	for i, existing := range bucket {
-		if existing == element {
+		if s.hashStrategy.Equals(existing, element) {
 			s.buckets[index] = append(bucket[:i], bucket[i+1:]...)
 			break
 		}
 	}
 
 	// Remove from linked list
-	if node.prev != nil {
-		node.prev.next = node.next
+	if nodeToRemove.prev != nil {
+		nodeToRemove.prev.next = nodeToRemove.next
 	} else {
-		s.head = node.next
+		s.head = nodeToRemove.next
 	}
 
-	if node.next != nil {
-		node.next.prev = node.prev
+	if nodeToRemove.next != nil {
+		nodeToRemove.next.prev = nodeToRemove.prev
 	} else {
-		s.tail = node.prev
+		s.tail = nodeToRemove.prev
 	}
 
 	// Remove from node map
-	delete(s.nodeMap, element)
+	delete(s.nodeMap, keyToRemove)
 	s.size--
 
 	return true
@@ -125,8 +149,12 @@ func (s *LinkedHashSet[E]) Remove(element E) bool {
 
 // Contains checks if the set contains the specified element
 func (s *LinkedHashSet[E]) Contains(element E) bool {
-	_, exists := s.nodeMap[element]
-	return exists
+	for existingElement := range s.nodeMap {
+		if s.hashStrategy.Equals(existingElement, element) {
+			return true
+		}
+	}
+	return false
 }
 
 // Size returns the number of elements in the set
@@ -170,7 +198,7 @@ func (s *LinkedHashSet[E]) ForEach(f func(E)) {
 
 // Union returns the union of this set and another set
 func (s *LinkedHashSet[E]) Union(other Set[E]) Set[E] {
-	result := NewLinkedHashSet[E]()
+	result := NewLinkedHashSetWithHashStrategy(s.hashStrategy)
 
 	// Add all elements from this set (maintains order)
 	s.ForEach(func(element E) {
@@ -187,7 +215,7 @@ func (s *LinkedHashSet[E]) Union(other Set[E]) Set[E] {
 
 // Intersection returns the intersection of this set and another set
 func (s *LinkedHashSet[E]) Intersection(other Set[E]) Set[E] {
-	result := NewLinkedHashSet[E]()
+	result := NewLinkedHashSetWithHashStrategy(s.hashStrategy)
 
 	// Add elements that exist in both sets (maintains order from this set)
 	s.ForEach(func(element E) {
@@ -201,7 +229,7 @@ func (s *LinkedHashSet[E]) Intersection(other Set[E]) Set[E] {
 
 // Difference returns the difference of this set and another set
 func (s *LinkedHashSet[E]) Difference(other Set[E]) Set[E] {
-	result := NewLinkedHashSet[E]()
+	result := NewLinkedHashSetWithHashStrategy(s.hashStrategy)
 
 	// Add elements that are in this set but not in the other set
 	s.ForEach(func(element E) {

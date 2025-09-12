@@ -2,7 +2,6 @@ package set
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/chenjianyu/collections/container/common"
@@ -27,7 +26,7 @@ func NewImmutableSetFromSlice[E comparable](elements []E) *ImmutableSet[E] {
 	for _, element := range elements {
 		elementMap[element] = struct{}{}
 	}
-	
+
 	return &ImmutableSet[E]{
 		elements: elementMap,
 	}
@@ -57,10 +56,9 @@ func (is *ImmutableSet[E]) IsEmpty() bool {
 	return len(is.elements) == 0
 }
 
-// Clear logs an error as ImmutableSet is immutable
+// Clear is a no-op as ImmutableSet is immutable
 func (is *ImmutableSet[E]) Clear() {
-	err := common.ImmutableOperationError("Clear", "create a new empty set")
-	log.Printf("Warning: %v", err)
+	// No-op for immutable collections
 }
 
 // Contains returns true if the set contains the specified element
@@ -69,17 +67,15 @@ func (is *ImmutableSet[E]) Contains(element E) bool {
 	return exists
 }
 
-// Add logs an error and returns false as ImmutableSet is immutable
+// Add returns false as ImmutableSet is immutable
 func (is *ImmutableSet[E]) Add(element E) bool {
-	err := common.ImmutableOperationError("Add", "use WithAdd method")
-	log.Printf("Warning: %v", err)
+	// Return false to indicate the operation failed
 	return false
 }
 
-// Remove logs an error and returns false as ImmutableSet is immutable
+// Remove returns false as ImmutableSet is immutable
 func (is *ImmutableSet[E]) Remove(element E) bool {
-	err := common.ImmutableOperationError("Remove", "use WithRemove method")
-	log.Printf("Warning: %v", err)
+	// Return false to indicate the operation failed
 	return false
 }
 
@@ -97,10 +93,10 @@ func (is *ImmutableSet[E]) WithAdd(element E) *ImmutableSet[E] {
 	if is.Contains(element) {
 		return is // Element already exists, return same instance
 	}
-	
+
 	newElements := is.copyElements()
 	newElements[element] = struct{}{}
-	
+
 	return &ImmutableSet[E]{elements: newElements}
 }
 
@@ -109,10 +105,10 @@ func (is *ImmutableSet[E]) WithRemove(element E) *ImmutableSet[E] {
 	if !is.Contains(element) {
 		return is // Element doesn't exist, return same instance
 	}
-	
+
 	newElements := is.copyElements()
 	delete(newElements, element)
-	
+
 	return &ImmutableSet[E]{elements: newElements}
 }
 
@@ -124,40 +120,40 @@ func (is *ImmutableSet[E]) WithClear() *ImmutableSet[E] {
 // Union returns the union of this set and another set
 func (is *ImmutableSet[E]) Union(other Set[E]) Set[E] {
 	result := is.copyElements()
-	
+
 	// Add all elements from the other set
 	other.ForEach(func(element E) {
 		result[element] = struct{}{}
 	})
-	
+
 	return &ImmutableSet[E]{elements: result}
 }
 
 // Intersection returns the intersection of this set and another set
 func (is *ImmutableSet[E]) Intersection(other Set[E]) Set[E] {
 	result := make(map[E]struct{})
-	
+
 	// Only include elements that exist in both sets
 	for element := range is.elements {
 		if other.Contains(element) {
 			result[element] = struct{}{}
 		}
 	}
-	
+
 	return &ImmutableSet[E]{elements: result}
 }
 
 // Difference returns the difference of this set and another set
 func (is *ImmutableSet[E]) Difference(other Set[E]) Set[E] {
 	result := make(map[E]struct{})
-	
+
 	// Only include elements that exist in this set but not in the other
 	for element := range is.elements {
 		if !other.Contains(element) {
 			result[element] = struct{}{}
 		}
 	}
-	
+
 	return &ImmutableSet[E]{elements: result}
 }
 
@@ -197,10 +193,10 @@ func (is *ImmutableSet[E]) String() string {
 	if is.IsEmpty() {
 		return "{}"
 	}
-	
+
 	var builder strings.Builder
 	builder.WriteString("{")
-	
+
 	first := true
 	for element := range is.elements {
 		if !first {
@@ -209,7 +205,7 @@ func (is *ImmutableSet[E]) String() string {
 		first = false
 		builder.WriteString(fmt.Sprintf("%v", element))
 	}
-	
+
 	builder.WriteString("}")
 	return builder.String()
 }
@@ -229,7 +225,7 @@ func (it *immutableSetIterator[E]) Next() (E, bool) {
 	if !it.HasNext() {
 		return zero, false
 	}
-	
+
 	element := it.elements[it.index]
 	it.index++
 	return element, true

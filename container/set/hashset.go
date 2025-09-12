@@ -10,18 +10,32 @@ import (
 
 // HashSet is a Set implementation based on hash table
 type HashSet[E comparable] struct {
-	buckets [][]E
-	size    int
+	buckets      [][]E
+	size         int
+	hashStrategy common.HashStrategy[E]
 }
 
-// New creates a new HashSet
+// New creates a new HashSet with default hash strategy
 func New[E comparable]() *HashSet[E] {
-	return &HashSet[E]{buckets: make([][]E, 16)}
+	return NewWithHashStrategy(common.NewComparableHashStrategy[E]())
 }
 
-// FromSlice creates a new HashSet from a slice
+// NewWithHashStrategy creates a new HashSet with custom hash strategy
+func NewWithHashStrategy[E comparable](hashStrategy common.HashStrategy[E]) *HashSet[E] {
+	return &HashSet[E]{
+		buckets:      make([][]E, 16),
+		hashStrategy: hashStrategy,
+	}
+}
+
+// FromSlice creates a new HashSet from a slice with default hash strategy
 func FromSlice[E comparable](slice []E) *HashSet[E] {
-	set := New[E]()
+	return FromSliceWithHashStrategy(slice, common.NewComparableHashStrategy[E]())
+}
+
+// FromSliceWithHashStrategy creates a new HashSet from a slice with custom hash strategy
+func FromSliceWithHashStrategy[E comparable](slice []E, hashStrategy common.HashStrategy[E]) *HashSet[E] {
+	set := NewWithHashStrategy(hashStrategy)
 	for _, element := range slice {
 		set.Add(element)
 	}
@@ -35,7 +49,7 @@ func (s *HashSet[E]) Add(element E) bool {
 
 	// Check if the element is really the same (handle hash collisions)
 	for _, existing := range bucket {
-		if existing == element {
+		if s.hashStrategy.Equals(existing, element) {
 			return false
 		}
 	}
@@ -52,7 +66,7 @@ func (s *HashSet[E]) Remove(element E) bool {
 
 	for i, existing := range bucket {
 		// Check if the element is really the same (handle hash collisions)
-		if existing == element {
+		if s.hashStrategy.Equals(existing, element) {
 			s.buckets[index] = append(bucket[:i], bucket[i+1:]...)
 			s.size--
 			return true
@@ -68,7 +82,7 @@ func (s *HashSet[E]) Contains(element E) bool {
 
 	for _, existing := range bucket {
 		// Check if the element is really the same (handle hash collisions)
-		if existing == element {
+		if s.hashStrategy.Equals(existing, element) {
 			return true
 		}
 	}
@@ -111,7 +125,7 @@ func (s *HashSet[E]) ForEach(fn func(E)) {
 
 // Union returns the union of this set and another set
 func (s *HashSet[E]) Union(other Set[E]) Set[E] {
-	result := New[E]()
+	result := NewWithHashStrategy(s.hashStrategy)
 
 	// Add all elements from this set
 	s.ForEach(func(element E) {
@@ -128,7 +142,7 @@ func (s *HashSet[E]) Union(other Set[E]) Set[E] {
 
 // Intersection returns the intersection of this set and another set
 func (s *HashSet[E]) Intersection(other Set[E]) Set[E] {
-	result := New[E]()
+	result := NewWithHashStrategy(s.hashStrategy)
 
 	// Add elements that exist in both sets
 	s.ForEach(func(element E) {
@@ -142,7 +156,7 @@ func (s *HashSet[E]) Intersection(other Set[E]) Set[E] {
 
 // Difference returns the difference of this set and another set
 func (s *HashSet[E]) Difference(other Set[E]) Set[E] {
-	result := New[E]()
+	result := NewWithHashStrategy(s.hashStrategy)
 
 	// Add elements that are in this set but not in the other set
 	s.ForEach(func(element E) {
@@ -254,9 +268,9 @@ func (it *hashSetIterator[E]) Remove() bool {
 	return removed
 }
 
-// hash computes hash value for the element
+// hash computes hash value for the element using the hash strategy
 func (s *HashSet[E]) hash(element E) int {
-	hashValue := int(common.Hash(element))
+	hashValue := int(s.hashStrategy.Hash(element))
 	if hashValue < 0 {
 		hashValue = -hashValue
 	}

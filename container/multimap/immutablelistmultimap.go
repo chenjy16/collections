@@ -3,8 +3,6 @@ package multimap
 import (
 	"fmt"
 	"strings"
-	"log"
-	"github.com/chenjianyu/collections/container/common"
 )
 
 // ImmutableListMultimap is an immutable implementation of a multimap that preserves duplicate values and insertion order
@@ -16,12 +14,12 @@ type ImmutableListMultimap[K comparable, V comparable] struct {
 // NewImmutableListMultimap creates a new ImmutableListMultimap from the given entries
 func NewImmutableListMultimap[K comparable, V comparable](entries []Entry[K, V]) *ImmutableListMultimap[K, V] {
 	data := make(map[K][]V)
-	
+
 	// Group values by key while preserving order and duplicates
 	for _, entry := range entries {
 		data[entry.Key] = append(data[entry.Key], entry.Value)
 	}
-	
+
 	return &ImmutableListMultimap[K, V]{
 		entries: append([]Entry[K, V]{}, entries...), // Create a copy of entries
 		data:    data,
@@ -31,26 +29,24 @@ func NewImmutableListMultimap[K comparable, V comparable](entries []Entry[K, V])
 // ListOf creates a new ImmutableListMultimap from the given key-value pairs
 func ListOf[K comparable, V comparable](pairs ...interface{}) *ImmutableListMultimap[K, V] {
 	if len(pairs)%2 != 0 {
-		err := common.ImmutableOperationError("ListOf requires an even number of arguments", "provide key-value pairs")
-		log.Printf("Warning: %v", err)
+		// Return empty multimap for invalid input
 		return NewImmutableListMultimap([]Entry[K, V]{})
 	}
-	
+
 	entries := make([]Entry[K, V], 0, len(pairs)/2)
-	
+
 	for i := 0; i < len(pairs); i += 2 {
 		key, ok1 := pairs[i].(K)
 		value, ok2 := pairs[i+1].(V)
-		
+
 		if !ok1 || !ok2 {
-			err := common.ImmutableOperationError("invalid type for key or value", "ensure correct types")
-			log.Printf("Warning: %v", err)
+			// Return empty multimap for invalid types
 			return NewImmutableListMultimap([]Entry[K, V]{})
 		}
-		
+
 		entries = append(entries, Entry[K, V]{Key: key, Value: value})
 	}
-	
+
 	return NewImmutableListMultimap(entries)
 }
 
@@ -64,38 +60,28 @@ func FromMultimapToList[K comparable, V comparable](multimap Multimap[K, V]) *Im
 	return NewImmutableListMultimap(multimap.Entries())
 }
 
-// Put logs an error and returns false as ImmutableListMultimap is immutable
+// Put returns false as ImmutableListMultimap is immutable
 func (m *ImmutableListMultimap[K, V]) Put(key K, value V) bool {
-	err := common.ImmutableOperationError("Put", "use builder pattern")
-	log.Printf("Warning: %v", err)
 	return false
 }
 
-// PutAll logs an error and returns false as ImmutableListMultimap is immutable
+// PutAll returns false as ImmutableListMultimap is immutable
 func (m *ImmutableListMultimap[K, V]) PutAll(multimap Multimap[K, V]) bool {
-	err := common.ImmutableOperationError("PutAll", "use builder pattern")
-	log.Printf("Warning: %v", err)
 	return false
 }
 
-// ReplaceValues logs an error and returns nil as ImmutableListMultimap is immutable
+// ReplaceValues returns nil as ImmutableListMultimap is immutable
 func (m *ImmutableListMultimap[K, V]) ReplaceValues(key K, values []V) []V {
-	err := common.ImmutableOperationError("ReplaceValues", "use builder pattern")
-	log.Printf("Warning: %v", err)
 	return nil
 }
 
-// Remove logs an error and returns false as ImmutableListMultimap is immutable
+// Remove returns false as ImmutableListMultimap is immutable
 func (m *ImmutableListMultimap[K, V]) Remove(key K, value V) bool {
-	err := common.ImmutableOperationError("Remove", "use builder pattern")
-	log.Printf("Warning: %v", err)
 	return false
 }
 
-// RemoveAll logs an error and returns nil as ImmutableListMultimap is immutable
+// RemoveAll returns nil as ImmutableListMultimap is immutable
 func (m *ImmutableListMultimap[K, V]) RemoveAll(key K) []V {
-	err := common.ImmutableOperationError("RemoveAll", "use builder pattern")
-	log.Printf("Warning: %v", err)
 	return nil
 }
 
@@ -123,13 +109,13 @@ func (m *ImmutableListMultimap[K, V]) ContainsEntry(key K, value V) bool {
 	if !exists {
 		return false
 	}
-	
+
 	for _, v := range values {
 		if v == value {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -139,7 +125,7 @@ func (m *ImmutableListMultimap[K, V]) Get(key K) []V {
 	if !exists {
 		return nil
 	}
-	
+
 	// Return a copy to maintain immutability
 	result := make([]V, len(values))
 	copy(result, values)
@@ -210,10 +196,9 @@ func (m *ImmutableListMultimap[K, V]) IsEmpty() bool {
 	return len(m.entries) == 0
 }
 
-// Clear logs an error as ImmutableListMultimap is immutable
+// Clear is a no-op as ImmutableListMultimap is immutable
 func (m *ImmutableListMultimap[K, V]) Clear() {
-	err := common.ImmutableOperationError("Clear", "create a new empty multimap")
-	log.Printf("Warning: %v", err)
+	// No-op for immutable collections
 }
 
 // Contains returns true if this multimap contains the specified element

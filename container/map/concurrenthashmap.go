@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+
+	"github.com/chenjianyu/collections/container/common"
 )
 
 // ConcurrentHashMap is a thread-safe hash map implementation
@@ -13,6 +15,7 @@ type ConcurrentHashMap[K comparable, V any] struct {
 	segments     []*segment[K, V]
 	segmentMask  uint32
 	segmentCount int
+	hashStrategy common.HashStrategy[K]
 }
 
 // segment represents a segment of ConcurrentHashMap
@@ -38,13 +41,23 @@ const defaultBuckets = 16
 // Load factor threshold for concurrent hash map
 const concurrentLoadFactor = 0.75
 
-// NewConcurrentHashMap creates a new ConcurrentHashMap
+// NewConcurrentHashMap creates a new ConcurrentHashMap with default hash strategy
 func NewConcurrentHashMap[K comparable, V any]() *ConcurrentHashMap[K, V] {
-	return NewConcurrentHashMapWithCapacity[K, V](defaultSegments * defaultBuckets)
+	return NewConcurrentHashMapWithHashStrategy[K, V](common.NewComparableHashStrategy[K]())
 }
 
-// NewConcurrentHashMapWithCapacity creates a ConcurrentHashMap with specified initial capacity
+// NewConcurrentHashMapWithHashStrategy creates a new ConcurrentHashMap with custom hash strategy
+func NewConcurrentHashMapWithHashStrategy[K comparable, V any](hashStrategy common.HashStrategy[K]) *ConcurrentHashMap[K, V] {
+	return NewConcurrentHashMapWithCapacityAndHashStrategy[K, V](defaultSegments*defaultBuckets, hashStrategy)
+}
+
+// NewConcurrentHashMapWithCapacity creates a ConcurrentHashMap with specified initial capacity and default hash strategy
 func NewConcurrentHashMapWithCapacity[K comparable, V any](capacity int) *ConcurrentHashMap[K, V] {
+	return NewConcurrentHashMapWithCapacityAndHashStrategy[K, V](capacity, common.NewComparableHashStrategy[K]())
+}
+
+// NewConcurrentHashMapWithCapacityAndHashStrategy creates a ConcurrentHashMap with specified initial capacity and custom hash strategy
+func NewConcurrentHashMapWithCapacityAndHashStrategy[K comparable, V any](capacity int, hashStrategy common.HashStrategy[K]) *ConcurrentHashMap[K, V] {
 	if capacity <= 0 {
 		capacity = defaultSegments * defaultBuckets
 	}
@@ -66,12 +79,18 @@ func NewConcurrentHashMapWithCapacity[K comparable, V any](capacity int) *Concur
 		segments:     segments,
 		segmentCount: segmentCount,
 		segmentMask:  uint32(segmentCount - 1),
+		hashStrategy: hashStrategy,
 	}
 }
 
-// ConcurrentHashMapFromMap creates ConcurrentHashMap from existing map
+// ConcurrentHashMapFromMap creates ConcurrentHashMap from existing map with default hash strategy
 func ConcurrentHashMapFromMap[K comparable, V any](m map[K]V) *ConcurrentHashMap[K, V] {
-	chm := NewConcurrentHashMapWithCapacity[K, V](len(m))
+	return ConcurrentHashMapFromMapWithHashStrategy[K, V](m, common.NewComparableHashStrategy[K]())
+}
+
+// ConcurrentHashMapFromMapWithHashStrategy creates ConcurrentHashMap from existing map with custom hash strategy
+func ConcurrentHashMapFromMapWithHashStrategy[K comparable, V any](m map[K]V, hashStrategy common.HashStrategy[K]) *ConcurrentHashMap[K, V] {
+	chm := NewConcurrentHashMapWithCapacityAndHashStrategy[K, V](len(m), hashStrategy)
 	for k, v := range m {
 		chm.Put(k, v)
 	}
@@ -79,7 +98,7 @@ func ConcurrentHashMapFromMap[K comparable, V any](m map[K]V) *ConcurrentHashMap
 }
 
 // Put associates the specified value with the specified key in this map
-func (chm *ConcurrentHashMap[K, V]) Put(key K, value V) {
+func (chm *ConcurrentHashMap[K, V]) Put(key K, value V) (V, bool) {
 	hash := chm.hash(key)
 	segmentIndex := hash & chm.segmentMask
 	segment := chm.segments[segmentIndex]
@@ -92,9 +111,10 @@ func (chm *ConcurrentHashMap[K, V]) Put(key K, value V) {
 
 	// Check if key already exists
 	for current := bucketPtr.next; current != nil; current = current.next {
-		if chm.keyEquals(current.key, key) {
+		if chm.hashStrategy.Equals(current.key, key) {
+			oldValue := current.value
 			current.value = value
-			return
+			return oldValue, true
 		}
 	}
 
@@ -111,6 +131,9 @@ func (chm *ConcurrentHashMap[K, V]) Put(key K, value V) {
 	if float64(segment.size) > float64(len(segment.buckets))*concurrentLoadFactor {
 		chm.resizeSegment(segment)
 	}
+
+	var zero V
+	return zero, false
 }
 
 // Get returns the value to which the specified key is mapped
@@ -126,7 +149,7 @@ func (chm *ConcurrentHashMap[K, V]) Get(key K) (V, bool) {
 	bucketPtr := &segment.buckets[bucketIndex]
 
 	for current := bucketPtr.next; current != nil; current = current.next {
-		if chm.keyEquals(current.key, key) {
+		if chm.hashStrategy.Equals(current.key, key) {
 			return current.value, true
 		}
 	}
@@ -148,7 +171,7 @@ func (chm *ConcurrentHashMap[K, V]) Remove(key K) (V, bool) {
 	bucketPtr := &segment.buckets[bucketIndex]
 
 	// If head node is the one to delete
-	if bucketPtr.next != nil && chm.keyEquals(bucketPtr.next.key, key) {
+	if bucketPtr.next != nil && chm.hashStrategy.Equals(bucketPtr.next.key, key) {
 		removed := bucketPtr.next.value
 		bucketPtr.next = bucketPtr.next.next
 		segment.size--
@@ -157,7 +180,7 @@ func (chm *ConcurrentHashMap[K, V]) Remove(key K) (V, bool) {
 
 	// Find the node to delete
 	for current := bucketPtr.next; current != nil && current.next != nil; current = current.next {
-		if chm.keyEquals(current.next.key, key) {
+		if chm.hashStrategy.Equals(current.next.key, key) {
 			removed := current.next.value
 			current.next = current.next.next
 			segment.size--
@@ -250,6 +273,21 @@ func (chm *ConcurrentHashMap[K, V]) Values() []V {
 	return values
 }
 
+// Entries returns a collection view of the key-value pairs contained in this map
+func (chm *ConcurrentHashMap[K, V]) Entries() []Pair[K, V] {
+	var entries []Pair[K, V]
+	for _, segment := range chm.segments {
+		segment.mutex.RLock()
+		for _, bkt := range segment.buckets {
+			for current := bkt.next; current != nil; current = current.next {
+				entries = append(entries, Pair[K, V]{Key: current.key, Value: current.value})
+			}
+		}
+		segment.mutex.RUnlock()
+	}
+	return entries
+}
+
 // ForEach performs the given action for each key-value pair in this map
 func (chm *ConcurrentHashMap[K, V]) ForEach(action func(K, V)) {
 	for _, segment := range chm.segments {
@@ -298,7 +336,7 @@ func (chm *ConcurrentHashMap[K, V]) PutIfAbsent(key K, value V) (V, bool) {
 
 	// Check if key already exists
 	for current := bucketPtr.next; current != nil; current = current.next {
-		if chm.keyEquals(current.key, key) {
+		if chm.hashStrategy.Equals(current.key, key) {
 			return current.value, false // Key exists, not inserted
 		}
 	}
@@ -334,7 +372,7 @@ func (chm *ConcurrentHashMap[K, V]) Replace(key K, value V) (V, bool) {
 	bucket := &segment.buckets[bucketIndex]
 
 	for current := bucket.next; current != nil; current = current.next {
-		if chm.keyEquals(current.key, key) {
+		if chm.hashStrategy.Equals(current.key, key) {
 			oldValue := current.value
 			current.value = value
 			return oldValue, true
@@ -358,7 +396,7 @@ func (chm *ConcurrentHashMap[K, V]) ReplaceIf(key K, oldValue, newValue V) bool 
 	bucket := &segment.buckets[bucketIndex]
 
 	for current := bucket.next; current != nil; current = current.next {
-		if chm.keyEquals(current.key, key) {
+		if chm.hashStrategy.Equals(current.key, key) {
 			if chm.valueEquals(current.value, oldValue) {
 				current.value = newValue
 				return true
@@ -371,7 +409,7 @@ func (chm *ConcurrentHashMap[K, V]) ReplaceIf(key K, oldValue, newValue V) bool 
 }
 
 // PutAll copies all elements from another Map
-func (chm *ConcurrentHashMap[K, V]) PutAll(other *ConcurrentHashMap[K, V]) {
+func (chm *ConcurrentHashMap[K, V]) PutAll(other Map[K, V]) {
 	other.ForEach(func(key K, value V) {
 		chm.Put(key, value)
 	})
@@ -412,7 +450,7 @@ func (chm *ConcurrentHashMap[K, V]) ComputeIfAbsent(key K, mappingFunction func(
 
 	// Check again (double-checked locking pattern)
 	for current := bucketPtr.next; current != nil; current = current.next {
-		if chm.keyEquals(current.key, key) {
+		if chm.hashStrategy.Equals(current.key, key) {
 			return current.value
 		}
 	}
@@ -448,7 +486,7 @@ func (chm *ConcurrentHashMap[K, V]) ComputeIfPresent(key K, remappingFunction fu
 	bucket := &segment.buckets[bucketIndex]
 
 	for current := bucket.next; current != nil; current = current.next {
-		if chm.keyEquals(current.key, key) {
+		if chm.hashStrategy.Equals(current.key, key) {
 			newValue := remappingFunction(key, current.value)
 			current.value = newValue
 			return newValue, true
@@ -461,36 +499,9 @@ func (chm *ConcurrentHashMap[K, V]) ComputeIfPresent(key K, remappingFunction fu
 
 // Internal helper methods
 
-// hash computes hash value for key
+// hash computes hash value for key using the hash strategy
 func (chm *ConcurrentHashMap[K, V]) hash(key K) uint32 {
-	// Use reflection to get byte representation of key
-	v := reflect.ValueOf(key)
-	switch v.Kind() {
-	case reflect.String:
-		s := v.String()
-		h := uint32(0)
-		for i := 0; i < len(s); i++ {
-			h = h*31 + uint32(s[i])
-		}
-		return h
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return uint32(v.Int())
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return uint32(v.Uint())
-	default:
-		// For other types, use their string representation
-		s := fmt.Sprintf("%v", key)
-		h := uint32(0)
-		for i := 0; i < len(s); i++ {
-			h = h*31 + uint32(s[i])
-		}
-		return h
-	}
-}
-
-// keyEquals compares two keys for equality
-func (chm *ConcurrentHashMap[K, V]) keyEquals(a, b K) bool {
-	return reflect.DeepEqual(a, b)
+	return uint32(chm.hashStrategy.Hash(key))
 }
 
 // valueEquals compares two values for equality

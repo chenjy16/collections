@@ -2,10 +2,7 @@ package maps
 
 import (
 	"fmt"
-	"log"
 	"strings"
-
-	"github.com/chenjianyu/collections/container/common"
 )
 
 // ImmutableMap is an immutable implementation of Map
@@ -27,7 +24,7 @@ func NewImmutableMapFromMap[K comparable, V any](m map[K]V) *ImmutableMap[K, V] 
 	for k, v := range m {
 		entries[k] = v
 	}
-	
+
 	return &ImmutableMap[K, V]{
 		entries: entries,
 	}
@@ -39,7 +36,7 @@ func MapOf[K comparable, V any](pairs ...Pair[K, V]) *ImmutableMap[K, V] {
 	for _, pair := range pairs {
 		entries[pair.Key] = pair.Value
 	}
-	
+
 	return &ImmutableMap[K, V]{
 		entries: entries,
 	}
@@ -64,17 +61,15 @@ func (im *ImmutableMap[K, V]) IsEmpty() bool {
 	return len(im.entries) == 0
 }
 
-// Clear logs an error as ImmutableMap is immutable
+// Clear is a no-op as ImmutableMap is immutable
 func (im *ImmutableMap[K, V]) Clear() {
-	err := common.ImmutableOperationError("Clear", "create a new empty map")
-	log.Printf("Warning: %v", err)
+	// No-op for immutable collections
 }
 
-// Put logs an error and returns the zero value as ImmutableMap is immutable
+// Put returns the zero value and false as ImmutableMap is immutable
 func (im *ImmutableMap[K, V]) Put(key K, value V) (V, bool) {
 	var zero V
-	err := common.ImmutableOperationError("Put", "use WithPut method")
-	log.Printf("Warning: %v", err)
+	// Return zero value and false to indicate the operation failed
 	return zero, false
 }
 
@@ -84,11 +79,10 @@ func (im *ImmutableMap[K, V]) Get(key K) (V, bool) {
 	return value, exists
 }
 
-// Remove logs an error and returns the zero value as ImmutableMap is immutable
+// Remove returns the zero value and false as ImmutableMap is immutable
 func (im *ImmutableMap[K, V]) Remove(key K) (V, bool) {
 	var zero V
-	err := common.ImmutableOperationError("Remove", "use WithRemove method")
-	log.Printf("Warning: %v", err)
+	// Return zero value and false to indicate the operation failed
 	return zero, false
 }
 
@@ -139,7 +133,7 @@ func (im *ImmutableMap[K, V]) Entries() []Pair[K, V] {
 func (im *ImmutableMap[K, V]) WithPut(key K, value V) *ImmutableMap[K, V] {
 	newEntries := im.copyEntries()
 	newEntries[key] = value
-	
+
 	return &ImmutableMap[K, V]{entries: newEntries}
 }
 
@@ -148,10 +142,10 @@ func (im *ImmutableMap[K, V]) WithRemove(key K) *ImmutableMap[K, V] {
 	if !im.ContainsKey(key) {
 		return im // Key doesn't exist, return same instance
 	}
-	
+
 	newEntries := im.copyEntries()
 	delete(newEntries, key)
-	
+
 	return &ImmutableMap[K, V]{entries: newEntries}
 }
 
@@ -160,20 +154,19 @@ func (im *ImmutableMap[K, V]) WithClear() *ImmutableMap[K, V] {
 	return NewImmutableMap[K, V]()
 }
 
-// PutAll logs an error as ImmutableMap is immutable
+// PutAll is not supported for ImmutableMap - this is a no-op
 func (im *ImmutableMap[K, V]) PutAll(other Map[K, V]) {
-	err := common.ImmutableOperationError("PutAll", "use WithPutAll method")
-	log.Printf("Warning: %v", err)
+	// No-op for immutable collections
 }
 
 // WithPutAll returns a new ImmutableMap with all key-value pairs from another map added
 func (im *ImmutableMap[K, V]) WithPutAll(other Map[K, V]) *ImmutableMap[K, V] {
 	newEntries := im.copyEntries()
-	
+
 	other.ForEach(func(key K, value V) {
 		newEntries[key] = value
 	})
-	
+
 	return &ImmutableMap[K, V]{entries: newEntries}
 }
 
@@ -189,10 +182,10 @@ func (im *ImmutableMap[K, V]) String() string {
 	if im.IsEmpty() {
 		return "{}"
 	}
-	
+
 	var builder strings.Builder
 	builder.WriteString("{")
-	
+
 	first := true
 	for k, v := range im.entries {
 		if !first {
@@ -201,7 +194,7 @@ func (im *ImmutableMap[K, V]) String() string {
 		first = false
 		builder.WriteString(fmt.Sprintf("%v=%v", k, v))
 	}
-	
+
 	builder.WriteString("}")
 	return builder.String()
 }

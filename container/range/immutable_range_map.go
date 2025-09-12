@@ -2,8 +2,6 @@ package ranges
 
 import (
 	"strings"
-	"log"
-	"github.com/chenjianyu/collections/container/common"
 )
 
 // ImmutableRangeMap is an immutable implementation of RangeMap
@@ -36,7 +34,7 @@ func NewImmutableRangeMapFromEntries[K comparable, V any](entries []Entry[K, V])
 	for _, entry := range entries {
 		mutableMap.Put(entry.Range, entry.Value)
 	}
-	
+
 	return &ImmutableRangeMap[K, V]{
 		entries:    convertToEntries(mutableMap.AsMapOfRanges()),
 		comparator: DefaultComparator[K],
@@ -62,10 +60,9 @@ func (irm *ImmutableRangeMap[K, V]) IsEmpty() bool {
 	return len(irm.entries) == 0
 }
 
-// Clear logs an error and returns as ImmutableRangeMap is immutable
+// Clear is a no-op as ImmutableRangeMap is immutable
 func (irm *ImmutableRangeMap[K, V]) Clear() {
-	err := common.ImmutableOperationError("Clear", "WithClear()")
-	log.Printf("Warning: %v", err)
+	// No-op for immutable collections
 }
 
 // WithClear returns a new empty ImmutableRangeMap
@@ -78,7 +75,7 @@ func (irm *ImmutableRangeMap[K, V]) String() string {
 	if len(irm.entries) == 0 {
 		return "{}"
 	}
-	
+
 	var parts []string
 	for _, entry := range irm.entries {
 		parts = append(parts, entry.String())
@@ -93,7 +90,7 @@ func (irm *ImmutableRangeMap[K, V]) Get(key K) (V, bool) {
 			return entry.Value, true
 		}
 	}
-	
+
 	var zero V
 	return zero, false
 }
@@ -105,16 +102,15 @@ func (irm *ImmutableRangeMap[K, V]) GetEntry(key K) (Range[K], V, bool) {
 			return entry.Range, entry.Value, true
 		}
 	}
-	
+
 	var zeroV V
 	var zeroR Range[K]
 	return zeroR, zeroV, false
 }
 
-// Put logs an error and returns as ImmutableRangeMap is immutable
+// Put is not supported for ImmutableRangeMap - this is a no-op
 func (irm *ImmutableRangeMap[K, V]) Put(rangeKey Range[K], value V) {
-	err := common.ImmutableOperationError("Put", "WithPut()")
-	log.Printf("Warning: %v", err)
+	// No-op for immutable collections
 }
 
 // WithPut returns a new ImmutableRangeMap with the range-value mapping added
@@ -122,24 +118,23 @@ func (irm *ImmutableRangeMap[K, V]) WithPut(rangeKey Range[K], value V) RangeMap
 	if rangeKey == nil || rangeKey.IsEmpty() {
 		return irm
 	}
-	
+
 	// Create a mutable copy and add the mapping
 	mutableMap := NewTreeRangeMapWithComparator[K, V](irm.comparator)
 	for _, entry := range irm.entries {
 		mutableMap.Put(entry.Range, entry.Value)
 	}
 	mutableMap.Put(rangeKey, value)
-	
+
 	return &ImmutableRangeMap[K, V]{
 		entries:    convertToEntries(mutableMap.AsMapOfRanges()),
 		comparator: irm.comparator,
 	}
 }
 
-// PutRange logs an error and returns as ImmutableRangeMap is immutable
+// PutRange is not supported for ImmutableRangeMap - this is a no-op
 func (irm *ImmutableRangeMap[K, V]) PutRange(lower K, lowerType BoundType, upper K, upperType BoundType, value V) {
-	err := common.ImmutableOperationError("PutRange", "WithPutRange()")
-	log.Printf("Warning: %v", err)
+	// No-op for immutable collections
 }
 
 // WithPutRange returns a new ImmutableRangeMap with the range-value mapping added
@@ -148,10 +143,9 @@ func (irm *ImmutableRangeMap[K, V]) WithPutRange(lower K, lowerType BoundType, u
 	return irm.WithPut(rangeKey, value)
 }
 
-// Remove logs an error and returns as ImmutableRangeMap is immutable
+// Remove is not supported for ImmutableRangeMap - this is a no-op
 func (irm *ImmutableRangeMap[K, V]) Remove(rangeToRemove Range[K]) {
-	err := common.ImmutableOperationError("Remove", "WithRemove()")
-	log.Printf("Warning: %v", err)
+	// No-op for immutable collections
 }
 
 // WithRemove returns a new ImmutableRangeMap with the range removed
@@ -159,24 +153,23 @@ func (irm *ImmutableRangeMap[K, V]) WithRemove(rangeToRemove Range[K]) RangeMap[
 	if rangeToRemove == nil || rangeToRemove.IsEmpty() {
 		return irm
 	}
-	
+
 	// Create a mutable copy and remove the range
 	mutableMap := NewTreeRangeMapWithComparator[K, V](irm.comparator)
 	for _, entry := range irm.entries {
 		mutableMap.Put(entry.Range, entry.Value)
 	}
 	mutableMap.Remove(rangeToRemove)
-	
+
 	return &ImmutableRangeMap[K, V]{
 		entries:    convertToEntries(mutableMap.AsMapOfRanges()),
 		comparator: irm.comparator,
 	}
 }
 
-// RemoveRange logs an error and returns as ImmutableRangeMap is immutable
+// RemoveRange is a no-op as ImmutableRangeMap is immutable
 func (irm *ImmutableRangeMap[K, V]) RemoveRange(lower K, lowerType BoundType, upper K, upperType BoundType) {
-	err := common.ImmutableOperationError("RemoveRange", "WithRemoveRange()")
-	log.Printf("Warning: %v", err)
+	// No-op for immutable collections
 }
 
 // WithRemoveRange returns a new ImmutableRangeMap with the range removed
@@ -210,17 +203,17 @@ func (irm *ImmutableRangeMap[K, V]) Span() (Range[K], bool) {
 		var zeroR Range[K]
 		return zeroR, false
 	}
-	
+
 	if len(irm.entries) == 1 {
 		return irm.entries[0].Range, true
 	}
-	
+
 	// Calculate the span of all ranges
 	span := irm.entries[0].Range
 	for i := 1; i < len(irm.entries); i++ {
 		span = span.Span(irm.entries[i].Range)
 	}
-	
+
 	return span, true
 }
 
@@ -229,9 +222,9 @@ func (irm *ImmutableRangeMap[K, V]) SubRangeMap(subRange Range[K]) RangeMap[K, V
 	if subRange == nil || subRange.IsEmpty() {
 		return NewImmutableRangeMapWithComparator[K, V](irm.comparator)
 	}
-	
+
 	var resultEntries []Entry[K, V]
-	
+
 	for _, entry := range irm.entries {
 		if entry.Range.IsConnected(subRange) {
 			intersection := entry.Range.Intersection(subRange)
@@ -243,7 +236,7 @@ func (irm *ImmutableRangeMap[K, V]) SubRangeMap(subRange Range[K]) RangeMap[K, V
 			}
 		}
 	}
-	
+
 	return &ImmutableRangeMap[K, V]{
 		entries:    resultEntries,
 		comparator: irm.comparator,
