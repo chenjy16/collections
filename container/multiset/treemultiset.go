@@ -27,9 +27,9 @@ type treeNode[E comparable] struct {
 
 // NewTreeMultiset creates a new empty TreeMultiset with default comparison
 func NewTreeMultiset[E comparable]() *TreeMultiset[E] {
-	return &TreeMultiset[E]{
-		cmp: defaultCompare[E],
-	}
+    return &TreeMultiset[E]{
+        cmp: common.CompareNatural[E],
+    }
 }
 
 // NewTreeMultisetWithComparator creates a new TreeMultiset with custom comparator
@@ -49,31 +49,7 @@ func NewTreeMultisetFromSlice[E comparable](elements []E) *TreeMultiset[E] {
 }
 
 // defaultCompare provides default comparison for comparable types
-func defaultCompare[E comparable](a, b E) int {
-	if any(a) == any(b) {
-		return 0
-	}
-	// For string comparison
-	if sa, ok := any(a).(string); ok {
-		if sb, ok := any(b).(string); ok {
-			if sa < sb {
-				return -1
-			} else if sa > sb {
-				return 1
-			}
-			return 0
-		}
-	}
-	// For numeric types, we'll use a simple approach
-	aStr := fmt.Sprintf("%v", a)
-	bStr := fmt.Sprintf("%v", b)
-	if aStr < bStr {
-		return -1
-	} else if aStr > bStr {
-		return 1
-	}
-	return 0
-}
+func defaultCompare[E comparable](a, b E) int { return common.CompareNatural[E](a, b) }
 
 // Add adds one occurrence of the specified element
 func (ms *TreeMultiset[E]) Add(element E) int {

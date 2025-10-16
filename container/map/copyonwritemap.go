@@ -95,15 +95,15 @@ func (m *CopyOnWriteMap[K, V]) ContainsKey(key K) bool {
 
 // ContainsValue if this map maps one or more keys to the specified value, returns true
 func (m *CopyOnWriteMap[K, V]) ContainsValue(value V) bool {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+    m.mu.RLock()
+    defer m.mu.RUnlock()
 
-	for _, v := range m.data {
-		if Equal(v, value) {
-			return true
-		}
-	}
-	return false
+    for _, v := range m.data {
+        if common.Equal(v, value) {
+            return true
+        }
+    }
+    return false
 }
 
 // Size returns the number of key-value mapping relationships in this map
@@ -152,15 +152,15 @@ func (m *CopyOnWriteMap[K, V]) Values() []V {
 }
 
 // Entries returns the mapping relationships contained in this map
-func (m *CopyOnWriteMap[K, V]) Entries() []Pair[K, V] {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+func (m *CopyOnWriteMap[K, V]) Entries() []common.Entry[K, V] {
+    m.mu.RLock()
+    defer m.mu.RUnlock()
 
-	entries := make([]Pair[K, V], 0, len(m.data))
-	for k, v := range m.data {
-		entries = append(entries, NewPair(k, v))
-	}
-	return entries
+    entries := make([]common.Entry[K, V], 0, len(m.data))
+    for k, v := range m.data {
+        entries = append(entries, common.NewEntry(k, v))
+    }
+    return entries
 }
 
 // ForEach executes the given operation for each entry in this map

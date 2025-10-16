@@ -1,9 +1,10 @@
 package ranges
 
 import (
-	"sort"
-	"strings"
-	"sync"
+    "sort"
+    "strings"
+    "sync"
+    "github.com/chenjianyu/collections/container/common"
 )
 
 // TreeRangeSet is a RangeSet implementation based on a TreeMap
@@ -24,10 +25,18 @@ func NewTreeRangeSet[T comparable]() RangeSet[T] {
 
 // NewTreeRangeSetWithComparator creates a new TreeRangeSet with custom comparator
 func NewTreeRangeSetWithComparator[T comparable](cmp Comparator[T]) RangeSet[T] {
-	return &TreeRangeSet[T]{
-		ranges:     make([]Range[T], 0),
-		comparator: cmp,
-	}
+    return &TreeRangeSet[T]{
+        ranges:     make([]Range[T], 0),
+        comparator: cmp,
+    }
+}
+
+// NewTreeRangeSetWithComparatorStrategy creates a new TreeRangeSet with a ComparatorStrategy
+func NewTreeRangeSetWithComparatorStrategy[T comparable](strategy common.ComparatorStrategy[T]) RangeSet[T] {
+    return &TreeRangeSet[T]{
+        ranges:     make([]Range[T], 0),
+        comparator: ComparatorFromStrategy[T](strategy),
+    }
 }
 
 // Size returns the number of ranges in this set

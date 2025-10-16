@@ -1,5 +1,7 @@
 package maps
 
+import "github.com/chenjianyu/collections/container/common"
+
 // Map is a generic map interface
 type Map[K comparable, V any] interface {
 	// Put associates the specified value with the specified key in this map
@@ -32,8 +34,8 @@ type Map[K comparable, V any] interface {
 	// Values returns the values contained in this map
 	Values() []V
 
-	// Entries returns the mapping relationships contained in this map
-	Entries() []Pair[K, V]
+    // Entries returns the mapping relationships contained in this map
+    Entries() []common.Entry[K, V]
 
 	// ForEach executes the given operation for each entry in this map
 	ForEach(f func(K, V))

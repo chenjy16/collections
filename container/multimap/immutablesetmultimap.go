@@ -1,24 +1,25 @@
 package multimap
 
 import (
-	"fmt"
-	"strings"
+    "fmt"
+    "strings"
 
-	"github.com/chenjianyu/collections/container/set"
+    "github.com/chenjianyu/collections/container/common"
+    "github.com/chenjianyu/collections/container/set"
 )
 
 // ImmutableSetMultimap is an immutable implementation of a multimap that eliminates duplicate values
 type ImmutableSetMultimap[K comparable, V comparable] struct {
-	entries []Entry[K, V]
-	data    map[K][]V
-	sets    map[K]set.Set[V] // Used for quick lookups and deduplication
+    entries []common.Entry[K, V]
+    data    map[K][]V
+    sets    map[K]set.Set[V] // Used for quick lookups and deduplication
 }
 
 // NewImmutableSetMultimap creates a new ImmutableSetMultimap from the given entries
-func NewImmutableSetMultimap[K comparable, V comparable](entries []Entry[K, V]) *ImmutableSetMultimap[K, V] {
-	data := make(map[K][]V)
-	sets := make(map[K]set.Set[V])
-	dedupEntries := make([]Entry[K, V], 0)
+func NewImmutableSetMultimap[K comparable, V comparable](entries []common.Entry[K, V]) *ImmutableSetMultimap[K, V] {
+    data := make(map[K][]V)
+    sets := make(map[K]set.Set[V])
+    dedupEntries := make([]common.Entry[K, V], 0)
 
 	// Group values by key and eliminate duplicates
 	for _, entry := range entries {
@@ -38,45 +39,45 @@ func NewImmutableSetMultimap[K comparable, V comparable](entries []Entry[K, V]) 
 		}
 	}
 
-	return &ImmutableSetMultimap[K, V]{
-		entries: dedupEntries,
-		data:    data,
-		sets:    sets,
-	}
+    return &ImmutableSetMultimap[K, V]{
+        entries: dedupEntries,
+        data:    data,
+        sets:    sets,
+    }
 }
 
 // SetOf creates a new ImmutableSetMultimap from the given key-value pairs
 func SetOf[K comparable, V comparable](pairs ...interface{}) *ImmutableSetMultimap[K, V] {
-	if len(pairs)%2 != 0 {
-		// Return empty multimap for invalid input
-		return NewImmutableSetMultimap([]Entry[K, V]{})
-	}
+    if len(pairs)%2 != 0 {
+        // Return empty multimap for invalid input
+        return NewImmutableSetMultimap([]common.Entry[K, V]{})
+    }
 
-	entries := make([]Entry[K, V], 0, len(pairs)/2)
+    entries := make([]common.Entry[K, V], 0, len(pairs)/2)
 
 	for i := 0; i < len(pairs); i += 2 {
 		key, ok1 := pairs[i].(K)
 		value, ok2 := pairs[i+1].(V)
 
-		if !ok1 || !ok2 {
-			// Return empty multimap for invalid types
-			return NewImmutableSetMultimap([]Entry[K, V]{})
-		}
+        if !ok1 || !ok2 {
+            // Return empty multimap for invalid types
+            return NewImmutableSetMultimap([]common.Entry[K, V]{})
+        }
 
-		entries = append(entries, Entry[K, V]{Key: key, Value: value})
-	}
+        entries = append(entries, common.NewEntry[K, V](key, value))
+    }
 
 	return NewImmutableSetMultimap(entries)
 }
 
 // FromHashMultimap creates a new ImmutableSetMultimap from the given HashMultimap
 func FromHashMultimap[K comparable, V comparable](multimap *HashMultimap[K, V]) *ImmutableSetMultimap[K, V] {
-	return NewImmutableSetMultimap(multimap.Entries())
+    return NewImmutableSetMultimap(multimap.Entries())
 }
 
 // FromMultimapToSet creates a new ImmutableSetMultimap from any multimap
 func FromMultimapToSet[K comparable, V comparable](multimap Multimap[K, V]) *ImmutableSetMultimap[K, V] {
-	return NewImmutableSetMultimap(multimap.Entries())
+    return NewImmutableSetMultimap(multimap.Entries())
 }
 
 // Put is not supported for ImmutableSetMultimap and returns false
@@ -169,11 +170,11 @@ func (m *ImmutableSetMultimap[K, V]) Values() []V {
 }
 
 // Entries returns all key-value pairs in this multimap with duplicates removed
-func (m *ImmutableSetMultimap[K, V]) Entries() []Entry[K, V] {
-	// Return a copy to maintain immutability
-	result := make([]Entry[K, V], len(m.entries))
-	copy(result, m.entries)
-	return result
+func (m *ImmutableSetMultimap[K, V]) Entries() []common.Entry[K, V] {
+    // Return a copy to maintain immutability
+    result := make([]common.Entry[K, V], len(m.entries))
+    copy(result, m.entries)
+    return result
 }
 
 // KeySet returns a set view of the distinct keys in this multimap

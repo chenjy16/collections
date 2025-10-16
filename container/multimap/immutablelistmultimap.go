@@ -1,63 +1,65 @@
 package multimap
 
 import (
-	"fmt"
-	"strings"
+    "fmt"
+    "strings"
+
+    "github.com/chenjianyu/collections/container/common"
 )
 
 // ImmutableListMultimap is an immutable implementation of a multimap that preserves duplicate values and insertion order
 type ImmutableListMultimap[K comparable, V comparable] struct {
-	entries []Entry[K, V]
-	data    map[K][]V
+    entries []common.Entry[K, V]
+    data    map[K][]V
 }
 
 // NewImmutableListMultimap creates a new ImmutableListMultimap from the given entries
-func NewImmutableListMultimap[K comparable, V comparable](entries []Entry[K, V]) *ImmutableListMultimap[K, V] {
-	data := make(map[K][]V)
+func NewImmutableListMultimap[K comparable, V comparable](entries []common.Entry[K, V]) *ImmutableListMultimap[K, V] {
+    data := make(map[K][]V)
 
 	// Group values by key while preserving order and duplicates
 	for _, entry := range entries {
 		data[entry.Key] = append(data[entry.Key], entry.Value)
 	}
 
-	return &ImmutableListMultimap[K, V]{
-		entries: append([]Entry[K, V]{}, entries...), // Create a copy of entries
-		data:    data,
-	}
+    return &ImmutableListMultimap[K, V]{
+        entries: append([]common.Entry[K, V]{}, entries...), // Create a copy of entries
+        data:    data,
+    }
 }
 
 // ListOf creates a new ImmutableListMultimap from the given key-value pairs
 func ListOf[K comparable, V comparable](pairs ...interface{}) *ImmutableListMultimap[K, V] {
-	if len(pairs)%2 != 0 {
-		// Return empty multimap for invalid input
-		return NewImmutableListMultimap([]Entry[K, V]{})
-	}
+    if len(pairs)%2 != 0 {
+        // Return empty multimap for invalid input
+        return NewImmutableListMultimap([]common.Entry[K, V]{})
+    }
 
-	entries := make([]Entry[K, V], 0, len(pairs)/2)
+    entries := make([]common.Entry[K, V], 0, len(pairs)/2)
 
 	for i := 0; i < len(pairs); i += 2 {
 		key, ok1 := pairs[i].(K)
 		value, ok2 := pairs[i+1].(V)
 
-		if !ok1 || !ok2 {
-			// Return empty multimap for invalid types
-			return NewImmutableListMultimap([]Entry[K, V]{})
-		}
+        if !ok1 || !ok2 {
+            // Return empty multimap for invalid types
+            return NewImmutableListMultimap([]common.Entry[K, V]{})
+        }
 
-		entries = append(entries, Entry[K, V]{Key: key, Value: value})
-	}
+        entries = append(entries, common.NewEntry[K, V](key, value))
+    }
 
 	return NewImmutableListMultimap(entries)
 }
 
 // FromArrayListMultimap creates a new ImmutableListMultimap from the given ArrayListMultimap
 func FromArrayListMultimap[K comparable, V comparable](multimap *ArrayListMultimap[K, V]) *ImmutableListMultimap[K, V] {
-	return NewImmutableListMultimap(multimap.Entries())
+    return NewImmutableListMultimap(multimap.Entries())
 }
 
 // FromMultimap creates a new ImmutableListMultimap from any multimap
 func FromMultimapToList[K comparable, V comparable](multimap Multimap[K, V]) *ImmutableListMultimap[K, V] {
-	return NewImmutableListMultimap(multimap.Entries())
+    return NewImmutableListMultimap(multimap.Entries())
 }
 
 // Put returns false as ImmutableListMultimap is immutable
@@ -143,19 +145,19 @@ func (m *ImmutableListMultimap[K, V]) Keys() []K {
 
 // Values returns all values in this multimap in insertion order
 func (m *ImmutableListMultimap[K, V]) Values() []V {
-	values := make([]V, 0, len(m.entries))
-	for _, entry := range m.entries {
-		values = append(values, entry.Value)
-	}
-	return values
+    values := make([]V, 0, len(m.entries))
+    for _, entry := range m.entries {
+        values = append(values, entry.Value)
+    }
+    return values
 }
 
 // Entries returns all key-value pairs in this multimap in insertion order
-func (m *ImmutableListMultimap[K, V]) Entries() []Entry[K, V] {
-	// Return a copy to maintain immutability
-	result := make([]Entry[K, V], len(m.entries))
-	copy(result, m.entries)
-	return result
+func (m *ImmutableListMultimap[K, V]) Entries() []common.Entry[K, V] {
+    // Return a copy to maintain immutability
+    result := make([]common.Entry[K, V], len(m.entries))
+    copy(result, m.entries)
+    return result
 }
 
 // KeySet returns a set view of the distinct keys in this multimap

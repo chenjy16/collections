@@ -2,12 +2,13 @@
 package common
 
 import (
-	"fmt"
-	"hash"
-	"hash/fnv"
-	"math"
-	"reflect"
-	"strings"
+    "fmt"
+    "hash"
+    "hash/fnv"
+    "math"
+    "reflect"
+    "sort"
+    "strings"
 )
 
 // Equal compares two values for equality
@@ -26,7 +27,7 @@ func Hash(v interface{}) uint64 {
 
 // hashValue recursively calculates hash value
 func hashValue(v reflect.Value, h hash.Hash64) {
-	switch v.Kind() {
+    switch v.Kind() {
 	case reflect.Bool:
 		if v.Bool() {
 			h.Write([]byte{1})
@@ -49,16 +50,30 @@ func hashValue(v reflect.Value, h hash.Hash64) {
 		writeUint64ToHash(h, bits)
 	case reflect.String:
 		h.Write([]byte(v.String()))
-	case reflect.Slice, reflect.Array:
-		// Hash length first to distinguish between different length arrays
-		writeInt64ToHash(h, int64(v.Len()))
-		for i := 0; i < v.Len(); i++ {
-			hashValue(v.Index(i), h)
-		}
-	case reflect.Struct:
-		for i := 0; i < v.NumField(); i++ {
-			hashValue(v.Field(i), h)
-		}
+    case reflect.Slice, reflect.Array:
+        // Hash length first to distinguish between different length arrays
+        writeInt64ToHash(h, int64(v.Len()))
+        for i := 0; i < v.Len(); i++ {
+            hashValue(v.Index(i), h)
+        }
+    case reflect.Map:
+        // Deterministic hashing for maps: hash length and entries in sorted key order
+        keys := v.MapKeys()
+        writeInt64ToHash(h, int64(len(keys)))
+        // Sort keys using the generic comparator for stability across runs
+        sort.Slice(keys, func(i, j int) bool {
+            return Compare(keys[i].Interface(), keys[j].Interface()) < 0
+        })
+        for _, k := range keys {
+            // Hash key then value for each entry
+            hashValue(k, h)
+            val := v.MapIndex(k)
+            hashValue(val, h)
+        }
+    case reflect.Struct:
+        for i := 0; i < v.NumField(); i++ {
+            hashValue(v.Field(i), h)
+        }
 	case reflect.Ptr:
 		if !v.IsNil() {
 			hashValue(v.Elem(), h)
@@ -208,6 +223,16 @@ func Compare(a, b interface{}) int {
 		}
 	case float32:
 		if vb, ok := b.(float32); ok {
+			// Handle NaN explicitly for deterministic ordering
+			if math.IsNaN(float64(va)) {
+				if math.IsNaN(float64(vb)) {
+					return 0
+				}
+				return -1
+			}
+			if math.IsNaN(float64(vb)) {
+				return 1
+			}
 			if va < vb {
 				return -1
 			} else if va > vb {
@@ -217,6 +242,16 @@ func Compare(a, b interface{}) int {
 		}
 	case float64:
 		if vb, ok := b.(float64); ok {
+			// Handle NaN explicitly for deterministic ordering
+			if math.IsNaN(va) {
+				if math.IsNaN(vb) {
+					return 0
+				}
+				return -1
+			}
+			if math.IsNaN(vb) {
+				return 1
+			}
 			if va < vb {
 				return -1
 			} else if va > vb {
@@ -343,6 +378,16 @@ func CompareGeneric[T comparable](a, b T) int {
 		return 0
 	case float32:
 		vb := any(b).(float32)
+		// Handle NaN explicitly for deterministic ordering
+		if math.IsNaN(float64(va)) {
+			if math.IsNaN(float64(vb)) {
+				return 0
+			}
+			return -1
+		}
+		if math.IsNaN(float64(vb)) {
+			return 1
+		}
 		if va < vb {
 			return -1
 		} else if va > vb {
@@ -351,6 +396,16 @@ func CompareGeneric[T comparable](a, b T) int {
 		return 0
 	case float64:
 		vb := any(b).(float64)
+		// Handle NaN explicitly for deterministic ordering
+		if math.IsNaN(va) {
+			if math.IsNaN(vb) {
+				return 0
+			}
+			return -1
+		}
+		if math.IsNaN(vb) {
+			return 1
+		}
 		if va < vb {
 			return -1
 		} else if va > vb {
@@ -382,20 +437,47 @@ func CompareGeneric[T comparable](a, b T) int {
 	}
 }
 
-// Pair represents a key-value pair
-type Pair[K, V any] struct {
-	Key   K
-	Value V
+// CompareNatural first uses Comparable.CompareTo when available, otherwise falls back to CompareGeneric
+// This provides consistent "natural" ordering across custom comparable types and built-ins.
+func CompareNatural[T comparable](a, b T) int {
+    if ca, ok := any(a).(Comparable); ok {
+        return ca.CompareTo(any(b))
+    }
+    return CompareGeneric[T](a, b)
 }
 
-// NewPair creates a new key-value pair
-func NewPair[K, V any](key K, value V) Pair[K, V] {
-	return Pair[K, V]{Key: key, Value: value}
+// Entry represents a key-value pair used across Map/Multimap APIs
+type Entry[K, V any] struct {
+    Key   K
+    Value V
+}
+
+// NewEntry creates a new key-value pair
+func NewEntry[K, V any](key K, value V) Entry[K, V] {
+    return Entry[K, V]{Key: key, Value: value}
+}
+
+// String returns the string representation of the Entry
+func (e Entry[K, V]) String() string {
+    return fmt.Sprintf("(%v, %v)", e.Key, e.Value)
+}
+
+// Pair is a compatibility struct mirroring Entry for older Go versions
+// Deprecated: prefer Entry/NewEntry directly.
+type Pair[K, V any] struct {
+    Key   K
+    Value V
 }
 
 // String returns the string representation of the Pair
 func (p Pair[K, V]) String() string {
-	return fmt.Sprintf("(%v, %v)", p.Key, p.Value)
+    return fmt.Sprintf("(%v, %v)", p.Key, p.Value)
+}
+
+// NewPair is a compatibility constructor that forwards to NewEntry.
+// Deprecated: use NewEntry instead.
+func NewPair[K, V any](key K, value V) Pair[K, V] {
+    return Pair[K, V]{Key: key, Value: value}
 }
 
 // ZeroValue returns the zero value of type T

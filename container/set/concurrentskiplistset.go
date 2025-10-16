@@ -32,18 +32,18 @@ type skipListNode[E comparable] struct {
 }
 
 // NewConcurrentSkipListSet creates a new ConcurrentSkipListSet using default comparator
-// Default comparator only supports int type
+// Default comparator prefers Comparable.CompareTo, otherwise falls back to natural generic ordering
 func NewConcurrentSkipListSet[E comparable]() *ConcurrentSkipListSet[E] {
-	head := &skipListNode[E]{
-		next: make([]*skipListNode[E], maxLevels),
-	}
+    head := &skipListNode[E]{
+        next: make([]*skipListNode[E], maxLevels),
+    }
 
-	return &ConcurrentSkipListSet[E]{
-		head:       head,
-		comparator: Compare[E],
-		size:       0,
-		rand:       rand.New(rand.NewSource(time.Now().UnixNano())),
-	}
+    return &ConcurrentSkipListSet[E]{
+        head:       head,
+        comparator: common.CompareNatural[E],
+        size:       0,
+        rand:       rand.New(rand.NewSource(time.Now().UnixNano())),
+    }
 }
 
 // NewConcurrentSkipListSetWithComparator creates a ConcurrentSkipListSet with specified comparator
@@ -58,6 +58,22 @@ func NewConcurrentSkipListSetWithComparator[E comparable](comparator func(a, b E
 		size:       0,
 		rand:       rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
+}
+
+// NewConcurrentSkipListSetWithComparatorStrategy creates a ConcurrentSkipListSet with a ComparatorStrategy
+func NewConcurrentSkipListSetWithComparatorStrategy[E comparable](strategy common.ComparatorStrategy[E]) *ConcurrentSkipListSet[E] {
+    head := &skipListNode[E]{
+        next: make([]*skipListNode[E], maxLevels),
+    }
+
+    return &ConcurrentSkipListSet[E]{
+        head: head,
+        comparator: func(a, b E) int {
+            return strategy.Compare(a, b)
+        },
+        size: 0,
+        rand: rand.New(rand.NewSource(time.Now().UnixNano())),
+    }
 }
 
 // randomLevel generates a random level for new nodes

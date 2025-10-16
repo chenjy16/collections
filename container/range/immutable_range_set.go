@@ -1,7 +1,8 @@
 package ranges
 
 import (
-	"strings"
+    "strings"
+    "github.com/chenjianyu/collections/container/common"
 )
 
 // ImmutableRangeSet is an immutable implementation of RangeSet
@@ -21,10 +22,18 @@ func NewImmutableRangeSet[T comparable]() RangeSet[T] {
 
 // NewImmutableRangeSetWithComparator creates a new ImmutableRangeSet with custom comparator
 func NewImmutableRangeSetWithComparator[T comparable](cmp Comparator[T]) RangeSet[T] {
-	return &ImmutableRangeSet[T]{
-		ranges:     make([]Range[T], 0),
-		comparator: cmp,
-	}
+    return &ImmutableRangeSet[T]{
+        ranges:     make([]Range[T], 0),
+        comparator: cmp,
+    }
+}
+
+// NewImmutableRangeSetWithComparatorStrategy creates a new ImmutableRangeSet with a ComparatorStrategy
+func NewImmutableRangeSetWithComparatorStrategy[T comparable](strategy common.ComparatorStrategy[T]) RangeSet[T] {
+    return &ImmutableRangeSet[T]{
+        ranges:     make([]Range[T], 0),
+        comparator: ComparatorFromStrategy[T](strategy),
+    }
 }
 
 // NewImmutableRangeSetFromRanges creates a new ImmutableRangeSet from existing ranges

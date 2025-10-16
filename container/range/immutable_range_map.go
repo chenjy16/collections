@@ -1,7 +1,8 @@
 package ranges
 
 import (
-	"strings"
+    "strings"
+    "github.com/chenjianyu/collections/container/common"
 )
 
 // ImmutableRangeMap is an immutable implementation of RangeMap
@@ -21,10 +22,18 @@ func NewImmutableRangeMap[K comparable, V any]() RangeMap[K, V] {
 
 // NewImmutableRangeMapWithComparator creates a new ImmutableRangeMap with custom comparator
 func NewImmutableRangeMapWithComparator[K comparable, V any](cmp Comparator[K]) RangeMap[K, V] {
-	return &ImmutableRangeMap[K, V]{
-		entries:    make([]Entry[K, V], 0),
-		comparator: cmp,
-	}
+    return &ImmutableRangeMap[K, V]{
+        entries:    make([]Entry[K, V], 0),
+        comparator: cmp,
+    }
+}
+
+// NewImmutableRangeMapWithComparatorStrategy creates a new ImmutableRangeMap with a ComparatorStrategy
+func NewImmutableRangeMapWithComparatorStrategy[K comparable, V any](strategy common.ComparatorStrategy[K]) RangeMap[K, V] {
+    return &ImmutableRangeMap[K, V]{
+        entries:    make([]Entry[K, V], 0),
+        comparator: ComparatorFromStrategy[K](strategy),
+    }
 }
 
 // NewImmutableRangeMapFromEntries creates a new ImmutableRangeMap from existing entries
@@ -241,4 +250,13 @@ func (irm *ImmutableRangeMap[K, V]) SubRangeMap(subRange Range[K]) RangeMap[K, V
 		entries:    resultEntries,
 		comparator: irm.comparator,
 	}
+}
+
+// Entries returns all range-value pairs in this range map
+func (irm *ImmutableRangeMap[K, V]) Entries() []common.Entry[Range[K], V] {
+    entries := make([]common.Entry[Range[K], V], 0, len(irm.entries))
+    for _, e := range irm.entries {
+        entries = append(entries, common.NewEntry[Range[K], V](e.Range, e.Value))
+    }
+    return entries
 }

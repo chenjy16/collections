@@ -84,12 +84,12 @@ func NewFunctionalHashStrategy[T any](hashFunc func(T) uint64, equalsFunc func(T
 	}
 }
 
-// DefaultComparatorStrategy provides a default comparator using the existing CompareGeneric function
+// DefaultComparatorStrategy provides a default comparator using natural ordering
 type DefaultComparatorStrategy[T comparable] struct{}
 
 // Compare implements ComparatorStrategy.Compare
 func (dcs *DefaultComparatorStrategy[T]) Compare(a, b T) int {
-	return CompareGeneric(a, b)
+    return CompareNatural(a, b)
 }
 
 // NewDefaultComparatorStrategy creates a new default comparator strategy

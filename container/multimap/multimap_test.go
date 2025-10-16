@@ -1,9 +1,10 @@
 package multimap
 
 import (
-	"testing"
+    "testing"
 
-	"github.com/stretchr/testify/assert"
+    "github.com/chenjianyu/collections/container/common"
+    "github.com/stretchr/testify/assert"
 )
 
 // Common test suite for all Multimap implementations
@@ -83,13 +84,13 @@ func testMultimapBasicOperations[K comparable, V comparable](t *testing.T, m Mul
 }
 
 // Helper function to check if entries contains a specific key-value pair
-func assertContainsEntry[K comparable, V comparable](t *testing.T, entries []Entry[K, V], key K, value V) {
-	for _, entry := range entries {
-		if entry.Key == key && entry.Value == value {
-			return
-		}
-	}
-	t.Errorf("Entry with key %v and value %v not found", key, value)
+func assertContainsEntry[K comparable, V comparable](t *testing.T, entries []common.Entry[K, V], key K, value V) {
+    for _, entry := range entries {
+        if entry.Key == key && entry.Value == value {
+            return
+        }
+    }
+    t.Errorf("Entry with key %v and value %v not found", key, value)
 }
 
 func TestArrayListMultimap(t *testing.T) {

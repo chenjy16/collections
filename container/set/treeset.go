@@ -1,29 +1,28 @@
 package set
 
 import (
-	"fmt"
-	"strings"
+    "fmt"
+    "strings"
 
-	"github.com/chenjianyu/collections/container/common"
+    "github.com/chenjianyu/collections/container/common"
 )
 
-// Compare compares two comparable type values
-// Note: This function only supports int type, for other types please use custom comparator
-func Compare[E any](a, b E) int {
-	// Try to convert to int type
-	cmpA, okA := any(a).(int)
-	cmpB, okB := any(b).(int)
-	if okA && okB {
-		if cmpA == cmpB {
-			return 0
-		} else if cmpA < cmpB {
-			return -1
-		} else {
-			return 1
-		}
-	}
-	// For non-int types, return 0 (equal)
-	return 0
+// defaultIntComparator provides a default comparator only for int types.
+// For non-int element types, please use NewTreeSetWithComparator or NewTreeSetWithComparatorStrategy.
+func defaultIntComparator[E comparable](a, b E) int {
+    cmpA, okA := any(a).(int)
+    cmpB, okB := any(b).(int)
+    if okA && okB {
+        if cmpA == cmpB {
+            return 0
+        } else if cmpA < cmpB {
+            return -1
+        }
+        return 1
+    }
+    // Non-int types are not supported by the default comparator
+    // Fall back to equality to avoid undefined ordering; pass a custom comparator for proper ordering
+    return 0
 }
 
 // TreeSet is a set implementation based on red-black tree
@@ -44,22 +43,33 @@ type treeNode[E comparable] struct {
 }
 
 // NewTreeSet creates a new TreeSet using default comparator
-// Default comparator only supports int type
+// Default comparator prefers Comparable.CompareTo, otherwise falls back to natural generic ordering
 func NewTreeSet[E comparable]() *TreeSet[E] {
-	return &TreeSet[E]{
-		root:       nil,
-		size:       0,
-		comparator: Compare[E],
-	}
+    return &TreeSet[E]{
+        root:       nil,
+        size:       0,
+        comparator: common.CompareNatural[E],
+    }
 }
 
 // NewTreeSetWithComparator creates a new TreeSet using custom comparator
 func NewTreeSetWithComparator[E comparable](comparator func(a, b E) int) *TreeSet[E] {
-	return &TreeSet[E]{
-		root:       nil,
-		size:       0,
-		comparator: comparator,
-	}
+    return &TreeSet[E]{
+        root:       nil,
+        size:       0,
+        comparator: comparator,
+    }
+}
+
+// NewTreeSetWithComparatorStrategy creates a new TreeSet using a ComparatorStrategy from common package
+func NewTreeSetWithComparatorStrategy[E comparable](strategy common.ComparatorStrategy[E]) *TreeSet[E] {
+    return &TreeSet[E]{
+        root: nil,
+        size: 0,
+        comparator: func(a, b E) int {
+            return strategy.Compare(a, b)
+        },
+    }
 }
 
 // Size returns the number of elements in the set

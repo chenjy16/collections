@@ -301,12 +301,16 @@ func (ms *ConcurrentHashMultiset[E]) ToSlice() []E {
 
 // Iterator returns an iterator over the multiset elements
 func (ms *ConcurrentHashMultiset[E]) Iterator() common.Iterator[E] {
-	return &concurrentHashMultisetIterator[E]{
-		multiset: ms,
-		entries:  ms.EntrySet(),
-		index:    0,
-		current:  0,
-	}
+    return &baseMultisetIterator[E]{
+        entries: ms.EntrySet(),
+        index:   0,
+        current: 0,
+        removeFunc: func(elem E) bool {
+            ms.Remove(elem)
+            return true
+        },
+        refresh: func() []Entry[E] { return ms.EntrySet() },
+    }
 }
 
 // ForEach executes the given function for each element in the multiset

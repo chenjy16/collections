@@ -1,58 +1,60 @@
 package multimap
 
 import (
-	"fmt"
-	"strings"
+    "fmt"
+    "strings"
+
+    "github.com/chenjianyu/collections/container/common"
 )
 
 // ImmutableMultimap is an immutable implementation of a multimap
 type ImmutableMultimap[K comparable, V comparable] struct {
-	entries []Entry[K, V]
-	data    map[K][]V
+    entries []common.Entry[K, V]
+    data    map[K][]V
 }
 
 // NewImmutableMultimap creates a new ImmutableMultimap from the given entries
-func NewImmutableMultimap[K comparable, V comparable](entries []Entry[K, V]) *ImmutableMultimap[K, V] {
-	data := make(map[K][]V)
+func NewImmutableMultimap[K comparable, V comparable](entries []common.Entry[K, V]) *ImmutableMultimap[K, V] {
+    data := make(map[K][]V)
 
 	// Group values by key
 	for _, entry := range entries {
 		data[entry.Key] = append(data[entry.Key], entry.Value)
 	}
 
-	return &ImmutableMultimap[K, V]{
-		entries: append([]Entry[K, V]{}, entries...), // Create a copy of entries
-		data:    data,
-	}
+    return &ImmutableMultimap[K, V]{
+        entries: append([]common.Entry[K, V]{}, entries...), // Create a copy of entries
+        data:    data,
+    }
 }
 
 // Of creates a new ImmutableMultimap from the given key-value pairs
 func Of[K comparable, V comparable](pairs ...interface{}) *ImmutableMultimap[K, V] {
-	if len(pairs)%2 != 0 {
-		// Return empty multimap for invalid input
-		return NewImmutableMultimap([]Entry[K, V]{})
-	}
+    if len(pairs)%2 != 0 {
+        // Return empty multimap for invalid input
+        return NewImmutableMultimap([]common.Entry[K, V]{})
+    }
 
-	entries := make([]Entry[K, V], 0, len(pairs)/2)
+    entries := make([]common.Entry[K, V], 0, len(pairs)/2)
 
 	for i := 0; i < len(pairs); i += 2 {
 		key, ok1 := pairs[i].(K)
 		value, ok2 := pairs[i+1].(V)
 
-		if !ok1 || !ok2 {
-			// Return empty multimap for invalid types
-			return NewImmutableMultimap([]Entry[K, V]{})
-		}
+        if !ok1 || !ok2 {
+            // Return empty multimap for invalid types
+            return NewImmutableMultimap([]common.Entry[K, V]{})
+        }
 
-		entries = append(entries, Entry[K, V]{Key: key, Value: value})
-	}
+        entries = append(entries, common.NewEntry[K, V](key, value))
+    }
 
 	return NewImmutableMultimap(entries)
 }
 
 // FromMultimap creates a new ImmutableMultimap from the given multimap
 func FromMultimap[K comparable, V comparable](multimap Multimap[K, V]) *ImmutableMultimap[K, V] {
-	return NewImmutableMultimap(multimap.Entries())
+    return NewImmutableMultimap(multimap.Entries())
 }
 
 // Put is not supported for ImmutableMultimap and returns an error
@@ -151,11 +153,11 @@ func (m *ImmutableMultimap[K, V]) Values() []V {
 }
 
 // Entries returns all key-value pairs in this multimap
-func (m *ImmutableMultimap[K, V]) Entries() []Entry[K, V] {
-	// Return a copy to maintain immutability
-	result := make([]Entry[K, V], len(m.entries))
-	copy(result, m.entries)
-	return result
+func (m *ImmutableMultimap[K, V]) Entries() []common.Entry[K, V] {
+    // Return a copy to maintain immutability
+    result := make([]common.Entry[K, V], len(m.entries))
+    copy(result, m.entries)
+    return result
 }
 
 // KeySet returns a set view of the distinct keys in this multimap

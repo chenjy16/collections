@@ -60,7 +60,7 @@ import (
     "github.com/chenjianyu/collections/container/common"
     "github.com/chenjianyu/collections/container/graph"
     "github.com/chenjianyu/collections/container/list"
-    "github.com/chenjianyu/collections/container/map"
+    maps "github.com/chenjianyu/collections/container/map"
     "github.com/chenjianyu/collections/container/multimap"
     "github.com/chenjianyu/collections/container/queue"
     "github.com/chenjianyu/collections/container/range"
@@ -71,12 +71,15 @@ import (
 func main() {
     // ===== List Example =====
     arrayList := list.New[int]()
-    arrayList.Add(1, 2, 3)
+    arrayList.Add(1)
+    arrayList.Add(2)
+    arrayList.Add(3)
     fmt.Println("List size:", arrayList.Size())
 
     // ===== Set Example =====
     hashSet := set.New[string]()
-    hashSet.Add("apple", "banana")
+    hashSet.Add("apple")
+    hashSet.Add("banana")
     fmt.Println("Set size:", hashSet.Size())
 
     // ===== Map Example =====
@@ -89,12 +92,17 @@ func main() {
 
     // ===== Concurrent Skip List Set =====
     skipSet := set.NewConcurrentSkipListSet[int]()
-    skipSet.Add(5, 2, 8, 1)
+    skipSet.Add(5)
+    skipSet.Add(2)
+    skipSet.Add(8)
+    skipSet.Add(1)
     fmt.Println("SkipSet (sorted):", skipSet)
 
     // ===== Multimap Example =====
     multiMap := multimap.NewArrayListMultimap[string, int]()
-    multiMap.Put("numbers", 1, 2, 3)
+    multiMap.Put("numbers", 1)
+    multiMap.Put("numbers", 2)
+    multiMap.Put("numbers", 3)
     multiMap.Put("letters", 97)
     fmt.Println("Values for 'numbers':", multiMap.Get("numbers"))
     fmt.Println("Multimap size:", multiMap.Size())
@@ -122,7 +130,8 @@ func main() {
     if err != nil && errors.Is(err, common.ErrIndexOutOfBounds) {
         fmt.Println("✓ IndexOutOfBounds on empty list")
     }
-    arrayList.Add(1, 2)
+    arrayList.Add(1)
+    arrayList.Add(2)
     _, err = arrayList.Get(5)
     if err != nil {
         fmt.Println("Invalid index error:", err)
@@ -260,7 +269,7 @@ Unique element collections with various ordering guarantees.
 
 - **ConcurrentSkipListSet**: Thread-safe ordered set
   - O(log n) operations
-  - Lock-free concurrent access
+  - Fine-grained locking (sync.RWMutex)
   - Scalable for high concurrency
 
 ### 🔢 Multiset
@@ -284,7 +293,7 @@ Collections that allow duplicate elements with counting functionality (similar t
 
 - **ConcurrentHashMultiset**: Thread-safe hash multiset
   - Segment-based locking for high concurrency
-  - Lock-free reads
+  - Read-optimized with minimal locking
   - Scalable concurrent counting
 
 - **ImmutableMultiset**: Immutable multiset implementation
@@ -314,7 +323,7 @@ Key-value pair collections with different characteristics.
 - **ConcurrentHashMap**: Thread-safe hash map
   - Segment-based locking
   - High concurrent performance
-  - Lock-free reads
+  - Read-optimized with segmented locks
 
 ### 🔒 Immutable Collections
 
@@ -340,6 +349,17 @@ immutable collections that provide thread-safe, copy-on-write semantics.
   - Returns new instances for all modification operations
   - Supports all standard map operations (get, keys, values, entries)
   - Creation methods: `NewImmutableMap()`, `NewImmutableMapFromMap()`, `MapOf()`
+
+#### Semantics
+
+- All direct mutation methods on immutable collections are no-ops and return failure indicators
+  - Set: `Add`/`Remove` return `false`
+  - Map: `Put`/`Remove` return `(zeroValue, false)`
+  - Multiset: mutation methods do not modify the original and return previous counts
+- Use `WithXxx` methods to create modified copies:
+  - Set: `WithAdd`, `WithRemove`, `WithClear`
+  - Map: `WithPut`, `WithRemove`, `WithClear`, `WithPutAll`
+  - Multiset: `WithAdd`, `WithAddCount`, `WithRemove`, `WithRemoveCount`, `WithClear`
 
 ### 🕸️ Graph
 
@@ -567,6 +587,30 @@ container/
 - Efficient iteration patterns
 - Cache-friendly data layouts
 
+### Comparator Strategies
+
+- Customize ordering using `common.ComparatorStrategy[T]` across ordered structures
+- Supported constructors:
+  - `set.NewTreeSetWithComparatorStrategy[T](strategy)` and `set.NewTreeSetWithComparator[T](cmp)`
+  - `set.NewConcurrentSkipListSetWithComparatorStrategy[T](strategy)` and `set.NewConcurrentSkipListSetWithComparator[T](cmp)`
+  - `ranges.NewTreeRangeSetWithComparatorStrategy[T](strategy)` and `ranges.NewTreeRangeSetWithComparator[T](cmp)`
+  - `ranges.NewTreeRangeMapWithComparatorStrategy[K, V](strategy)` and `ranges.NewTreeRangeMapWithComparator[K, V](cmp)`
+- Default comparator expectations:
+  - `TreeSet`/`ConcurrentSkipListSet`: natural ordering via `common.CompareNatural` (prefers `Comparable.CompareTo`, falls back to generic)
+  - `TreeMap`/`TreeMultimap` (keys): natural ordering via `common.CompareNatural`; TreeMultimap values use `TreeSet` with the same comparator
+  - `TreeMultiset`: natural ordering via `common.CompareNatural`
+  - `PriorityQueue`: default expects `common.Comparable`; provide a comparator for non-Comparable types
+  - Range structures: default comparator prefers `Comparable.CompareTo` then built-in natural order; strategies supported via `ComparatorFromStrategy`
+
+Example (reverse order with strategy):
+
+```go
+strat := common.NewFunctionalComparatorStrategy[int](func(a, b int) int { return b - a })
+ts := set.NewTreeSetWithComparatorStrategy[int](strat)
+rs := ranges.NewTreeRangeSetWithComparatorStrategy[int](strat)
+rm := ranges.NewTreeRangeMapWithComparatorStrategy[int, string](strat)
+```
+
 ## Iterator Pattern
 
 The library provides a unified iterator interface across all collection types:
@@ -592,7 +636,11 @@ type Iterator[E any] interface {
 
 ```go
 list := list.New[int]()
-list.Add(1, 2, 3, 4, 5)
+list.Add(1)
+list.Add(2)
+list.Add(3)
+list.Add(4)
+list.Add(5)
 
 // Safe removal during iteration
 iterator := list.Iterator()
@@ -610,12 +658,13 @@ for iterator.HasNext() {
 ### Thread-Safe Collections
 
 - **ConcurrentHashMap**: Segment-based locking for high concurrency
-- **ConcurrentSkipListSet**: Lock-free skip list implementation
+- **ConcurrentSkipListSet**: Fine-grained locking (sync.RWMutex)
+- **ConcurrentHashMultiset**: Segment-based locking with atomic size tracking
 - **CopyOnWriteMap**: Copy-on-write for read-heavy scenarios
 
 ### Concurrency Features
 
-- **Lock-Free Reads**: Where possible, reads don't require locks
+- **Read-Optimized Reads**: Minimize locking overhead for common read paths
 - **Fine-Grained Locking**: Minimal lock contention
 - **Atomic Operations**: Built-in atomic operations support
 - **Memory Consistency**: Proper memory barriers and synchronization
@@ -627,15 +676,21 @@ for iterator.HasNext() {
 ```go
 // List operations
 list := list.New[string]()
-list.Add("apple", "banana", "cherry")
+list.Add("apple")
+list.Add("banana")
+list.Add("cherry")
 list.Insert(1, "orange")
 fmt.Println(list.Get(1)) // "orange"
 
 // Set operations
 set1 := set.New[int]()
-set1.Add(1, 2, 3)
+set1.Add(1)
+set1.Add(2)
+set1.Add(3)
 set2 := set.New[int]()
-set2.Add(3, 4, 5)
+set2.Add(3)
+set2.Add(4)
+set2.Add(5)
 
 union := set1.Union(set2)        // {1, 2, 3, 4, 5}
 intersection := set1.Intersection(set2) // {3}
@@ -653,7 +708,8 @@ fmt.Println(multiset.TotalSize())      // 6
 fmt.Println(multiset.DistinctElements()) // 3
 
 // Map operations
-m := maps.NewHashMap[string, int]()
+// Use a concurrent map to demonstrate PutIfAbsent (implementation-specific)
+m := maps.NewConcurrentHashMap[string, int]()
 m.Put("one", 1)
 m.Put("two", 2)
 m.PutIfAbsent("three", 3)
@@ -671,14 +727,14 @@ type Person struct {
     Age  int
 }
 
-func (p Person) CompareTo(other Person) int {
-    if p.Age != other.Age {
-        return p.Age - other.Age
+cmp := func(a, b Person) int {
+    if a.Age != b.Age {
+        return a.Age - b.Age
     }
-    return strings.Compare(p.Name, other.Name)
+    return strings.Compare(a.Name, b.Name)
 }
 
-treeSet := set.NewTreeSet[Person]()
+treeSet := set.NewTreeSetWithComparator[Person](cmp)
 treeSet.Add(Person{"Alice", 30})
 treeSet.Add(Person{"Bob", 25})
 // Automatically sorted by age, then name
@@ -701,40 +757,50 @@ String() string    // String representation
 
 #### List Interface
 ```go
-Add(elements ...E)              // Add elements to end
-Insert(index int, element E)    // Insert at specific position
-Get(index int) (E, bool)       // Get element by index
-Set(index int, element E) bool // Set element at index
-RemoveAt(index int) (E, bool)  // Remove by index
-IndexOf(element E) int         // Find index of element
-SubList(start, end int) List[E] // Get sublist
+Add(element E) bool                              // Add element to end
+Insert(index int, element E) error               // Insert at specific position
+Get(index int) (E, error)                        // Get element by index
+Set(index int, element E) (E, bool)              // Replace element at index
+RemoveAt(index int) (E, bool)                    // Remove by index
+Remove(element E) bool                           // Remove first occurrence
+IndexOf(element E) int                           // Find index of element
+LastIndexOf(element E) int                       // Find last index of element
+SubList(fromIndex, toIndex int) (List[E], error) // Get sublist view
+ToSlice() []E                                    // Copy all elements to slice
 ```
 
 #### Set Interface
 ```go
-Add(elements ...E) bool        // Add elements
+Add(element E) bool            // Add element
 Remove(element E) bool         // Remove element
 Contains(element E) bool       // Check membership
 Union(other Set[E]) Set[E]     // Set union
 Intersection(other Set[E]) Set[E] // Set intersection
 Difference(other Set[E]) Set[E]   // Set difference
+IsSubsetOf(other Set[E]) bool  // Subset check
+IsSupersetOf(other Set[E]) bool // Superset check
+ToSlice() []E                  // Copy all elements to slice
 ```
 
 #### Multiset Interface
 ```go
-Add(element E)                    // Add single element
-AddCount(element E, count int)    // Add element with count
-Remove(element E) bool            // Remove one occurrence
-RemoveAll(element E) int          // Remove all occurrences
-Count(element E) int              // Get element count
-SetCount(element E, count int)    // Set element count
-TotalSize() int                   // Total number of elements
-DistinctElements() int            // Number of unique elements
-ElementSet() []E                  // Get unique elements
-EntrySet() []Entry[E]             // Get element-count pairs
-Union(other Multiset[E]) Multiset[E]        // Multiset union
-Intersection(other Multiset[E]) Multiset[E] // Multiset intersection
-Difference(other Multiset[E]) Multiset[E]   // Multiset difference
+Add(element E)                                     // Add single element (returns previous count)
+AddCount(element E, count int) (int, error)        // Add with count
+Remove(element E) int                              // Remove one occurrence (returns previous count)
+RemoveCount(element E, count int) (int, error)     // Remove with count
+RemoveAll(element E) int                           // Remove all occurrences (returns previous count)
+Count(element E) int                               // Get element count
+SetCount(element E, count int) (int, error)        // Set element count
+ElementSet() []E                                   // Get unique elements
+EntrySet() []Entry[E]                              // Get element-count pairs
+TotalSize() int                                    // Total number of elements
+DistinctElements() int                             // Number of unique elements
+ToSlice() []E                                      // All elements including duplicates
+Union(other Multiset[E]) Multiset[E]               // Multiset union (max counts)
+Intersection(other Multiset[E]) Multiset[E]        // Multiset intersection (min counts)
+Difference(other Multiset[E]) Multiset[E]          // Multiset difference
+IsSubsetOf(other Multiset[E]) bool                 // Subset by counts
+IsSupersetOf(other Multiset[E]) bool               // Superset by counts
 ```
 
 #### Map Interface
@@ -744,9 +810,59 @@ Get(key K) (V, bool)              // Get value by key
 Remove(key K) (V, bool)           // Remove entry
 ContainsKey(key K) bool           // Check key existence
 ContainsValue(value V) bool       // Check value existence
+Size() int                        // Number of entries
+IsEmpty() bool                    // Whether empty
+Clear()                           // Remove all entries
 Keys() []K                        // Get all keys
 Values() []V                      // Get all values
+Entries() []common.Entry[K, V]    // Get all key-value pairs (unified Entry type)
+ForEach(func(K, V))               // Iterate over entries
+String() string                   // String representation
+PutAll(other Map[K, V])           // Copy all entries from another Map
 ```
+
+#### Multimap Interface
+```go
+Put(key K, value V) bool                 // Add a key-value mapping
+PutAll(multimap Multimap[K, V]) bool     // Add all mappings from another multimap
+ReplaceValues(key K, values []V) []V     // Replace values for a key
+Remove(key K, value V) bool              // Remove a specific key-value mapping
+RemoveAll(key K) []V                     // Remove all values for a key
+ContainsKey(key K) bool                  // Whether key exists
+ContainsValue(value V) bool              // Whether any mapping to value exists
+ContainsEntry(key K, value V) bool       // Whether specific key-value mapping exists
+Get(key K) []V                           // All values for a key
+Keys() []K                               // All distinct keys
+Values() []V                             // All values across keys
+Entries() []common.Entry[K, V]           // All key-value pairs
+KeySet() []K                             // Distinct keys view
+AsMap() map[K][]V                        // Map view (key -> values)
+ForEach(func(K, V))                      // Iterate key-value pairs
+```
+
+### Concurrent Containers Behavior
+
+- CopyOnWriteMap
+  - Uses `sync.RWMutex`; writes acquire `Lock` and replace the underlying map with a fresh copy (copy-on-write).
+  - Reads and iteration (`Keys`, `Values`, `Entries`, `ForEach`) acquire `RLock` and operate on the current snapshot.
+  - `Snapshot()`/`ToMap()` return a copy for stable iteration; `PutIfAbsent`, `Replace`, `ReplaceIf` are atomic writes.
+
+- ConcurrentHashMap
+  - Segmented `sync.RWMutex` locks; each operation locks only the relevant segment for better concurrency.
+  - `Keys`/`Values`/`Entries` iterate segments under `RLock` per segment (weakly consistent view; may reflect concurrent updates).
+  - Provides advanced ops: `PutIfAbsent`, `Replace`, `ReplaceIf`, `ComputeIfAbsent`, `ComputeIfPresent`, plus `Snapshot`/`ToMap`.
+
+- ConcurrentSkipListSet
+  - Uses `sync.RWMutex`; `Add`/`Remove` under `Lock`, reads under `RLock`.
+  - `Iterator()` returns a snapshot built via `ToSlice()`; iterator `Remove()` is not supported for concurrent set.
+  - Maintains sorted order via skip list; `Union`/`Intersection`/`Difference` create new sets from snapshots.
+
+- ConcurrentHashMultiset
+  - Segment-based `sync.RWMutex`; counts stored per segment; total size maintained via atomic ops.
+  - `EntrySet()` builds a snapshot by reading each segment under `RLock`; `Iterator` iterates snapshot entries and refreshes after `Remove()`.
+  - Supports `AddCount`/`RemoveCount`/`SetCount` with atomic size adjustments; `ForEach` iterates over snapshot entries.
+
+> Note: Methods like `PutIfAbsent` and `Replace*` are implementation-specific to concurrent/copy-on-write maps. The base `Map` interface does not declare them.
 
 #### Graph Interface
 ```go

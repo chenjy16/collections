@@ -1,11 +1,12 @@
 package multimap
 
 import (
-	"fmt"
-	"strings"
-	"sync"
+    "fmt"
+    "strings"
+    "sync"
 
-	"github.com/chenjianyu/collections/container/list"
+    "github.com/chenjianyu/collections/container/common"
+    "github.com/chenjianyu/collections/container/list"
 )
 
 // ArrayListMultimap is a multimap implementation that uses ArrayList to store multiple values for a key
@@ -212,18 +213,18 @@ func (m *ArrayListMultimap[K, V]) Values() []V {
 }
 
 // Entries returns all key-value pairs in this multimap
-func (m *ArrayListMultimap[K, V]) Entries() []Entry[K, V] {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
+func (m *ArrayListMultimap[K, V]) Entries() []common.Entry[K, V] {
+    m.mutex.RLock()
+    defer m.mutex.RUnlock()
 
-	entries := make([]Entry[K, V], 0, m.size)
-	for key, valueList := range m.data {
-		for _, value := range valueList.ToSlice() {
-			entries = append(entries, Entry[K, V]{Key: key, Value: value})
-		}
-	}
+    entries := make([]common.Entry[K, V], 0, m.size)
+    for key, valueList := range m.data {
+        for _, value := range valueList.ToSlice() {
+            entries = append(entries, common.NewEntry[K, V](key, value))
+        }
+    }
 
-	return entries
+    return entries
 }
 
 // KeySet returns a set view of the distinct keys in this multimap

@@ -1,9 +1,10 @@
 package ranges
 
 import (
-	"sort"
-	"strings"
-	"sync"
+    "sort"
+    "strings"
+    "sync"
+    "github.com/chenjianyu/collections/container/common"
 )
 
 // TreeRangeMap is a mutable implementation of RangeMap backed by a tree structure
@@ -23,10 +24,18 @@ func NewTreeRangeMap[K comparable, V any]() RangeMap[K, V] {
 
 // NewTreeRangeMapWithComparator creates a new TreeRangeMap with custom comparator
 func NewTreeRangeMapWithComparator[K comparable, V any](cmp Comparator[K]) RangeMap[K, V] {
-	return &TreeRangeMap[K, V]{
-		entries:    make([]Entry[K, V], 0),
-		comparator: cmp,
-	}
+    return &TreeRangeMap[K, V]{
+        entries:    make([]Entry[K, V], 0),
+        comparator: cmp,
+    }
+}
+
+// NewTreeRangeMapWithComparatorStrategy creates a new TreeRangeMap with a ComparatorStrategy
+func NewTreeRangeMapWithComparatorStrategy[K comparable, V any](strategy common.ComparatorStrategy[K]) RangeMap[K, V] {
+    return &TreeRangeMap[K, V]{
+        entries:    make([]Entry[K, V], 0),
+        comparator: ComparatorFromStrategy[K](strategy),
+    }
 }
 
 // Size returns the number of range-value mappings in this map
@@ -236,6 +245,17 @@ func (trm *TreeRangeMap[K, V]) SubRangeMap(subRange Range[K]) RangeMap[K, V] {
 	}
 	
 	return result
+}
+
+// Entries returns all range-value pairs in this range map
+func (trm *TreeRangeMap[K, V]) Entries() []common.Entry[Range[K], V] {
+    trm.mutex.RLock()
+    defer trm.mutex.RUnlock()
+    entries := make([]common.Entry[Range[K], V], 0, len(trm.entries))
+    for _, e := range trm.entries {
+        entries = append(entries, common.NewEntry[Range[K], V](e.Range, e.Value))
+    }
+    return entries
 }
 
 // Helper method to remove overlapping ranges

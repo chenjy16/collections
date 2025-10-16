@@ -1,8 +1,9 @@
 package maps
 
 import (
-	"fmt"
-	"strings"
+    "fmt"
+    "strings"
+    "github.com/chenjianyu/collections/container/common"
 )
 
 // ImmutableMap is an immutable implementation of Map
@@ -94,12 +95,12 @@ func (im *ImmutableMap[K, V]) ContainsKey(key K) bool {
 
 // ContainsValue returns true if the map contains the specified value
 func (im *ImmutableMap[K, V]) ContainsValue(value V) bool {
-	for _, v := range im.entries {
-		if fmt.Sprintf("%v", v) == fmt.Sprintf("%v", value) {
-			return true
-		}
-	}
-	return false
+    for _, v := range im.entries {
+        if common.Equal(v, value) {
+            return true
+        }
+    }
+    return false
 }
 
 // Keys returns a slice of all keys in the map
@@ -121,12 +122,12 @@ func (im *ImmutableMap[K, V]) Values() []V {
 }
 
 // Entries returns a slice of all key-value pairs in the map
-func (im *ImmutableMap[K, V]) Entries() []Pair[K, V] {
-	entries := make([]Pair[K, V], 0, len(im.entries))
-	for k, v := range im.entries {
-		entries = append(entries, Pair[K, V]{Key: k, Value: v})
-	}
-	return entries
+func (im *ImmutableMap[K, V]) Entries() []common.Entry[K, V] {
+    entries := make([]common.Entry[K, V], 0, len(im.entries))
+    for k, v := range im.entries {
+        entries = append(entries, common.NewEntry(k, v))
+    }
+    return entries
 }
 
 // WithPut returns a new ImmutableMap with the key-value pair added/updated

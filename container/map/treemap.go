@@ -1,8 +1,9 @@
 package maps
 
 import (
-	"fmt"
-	"strings"
+    "fmt"
+    "strings"
+    "github.com/chenjianyu/collections/container/common"
 )
 
 // TreeMap is an ordered Map implementation based on red-black tree
@@ -24,11 +25,11 @@ type mapNode[K comparable, V any] struct {
 
 // NewTreeMap creates a new TreeMap using default comparator
 func NewTreeMap[K comparable, V any]() *TreeMap[K, V] {
-	return &TreeMap[K, V]{
-		comparator: func(a, b K) int {
-			return Compare(a, b)
-		},
-	}
+    return &TreeMap[K, V]{
+        comparator: func(a, b K) int {
+            return common.CompareNatural(a, b)
+        },
+    }
 }
 
 // NewTreeMapWithComparator creates a new TreeMap using specified comparator
@@ -421,14 +422,14 @@ func (m *TreeMap[K, V]) inOrderTraversalMapValues(node *mapNode[K, V], values *[
 	m.inOrderTraversalMapValues(node.right, values)
 }
 
-func (m *TreeMap[K, V]) inOrderTraversalMapEntries(node *mapNode[K, V], entries *[]Pair[K, V]) {
-	if node == nil {
-		return
-	}
+func (m *TreeMap[K, V]) inOrderTraversalMapEntries(node *mapNode[K, V], entries *[]common.Entry[K, V]) {
+    if node == nil {
+        return
+    }
 
-	m.inOrderTraversalMapEntries(node.left, entries)
-	*entries = append(*entries, NewPair(node.key, node.value))
-	m.inOrderTraversalMapEntries(node.right, entries)
+    m.inOrderTraversalMapEntries(node.left, entries)
+    *entries = append(*entries, common.NewEntry(node.key, node.value))
+    m.inOrderTraversalMapEntries(node.right, entries)
 }
 
 // Keys returns the keys contained in this map (in order)
@@ -446,10 +447,10 @@ func (m *TreeMap[K, V]) Values() []V {
 }
 
 // Entries returns the mapping relationships contained in this map (in key order)
-func (m *TreeMap[K, V]) Entries() []Pair[K, V] {
-	entries := make([]Pair[K, V], 0, m.size)
-	m.inOrderTraversalMapEntries(m.root, &entries)
-	return entries
+func (m *TreeMap[K, V]) Entries() []common.Entry[K, V] {
+    entries := make([]common.Entry[K, V], 0, m.size)
+    m.inOrderTraversalMapEntries(m.root, &entries)
+    return entries
 }
 
 // ForEach executes the given operation for each entry in this map (in key order)
@@ -459,13 +460,13 @@ func (m *TreeMap[K, V]) ForEach(f func(K, V)) {
 
 // ContainsValue if this map maps one or more keys to the specified value, returns true
 func (m *TreeMap[K, V]) ContainsValue(value V) bool {
-	found := false
-	m.inOrderTraversalMap(m.root, func(k K, v V) {
-		if !found && Equal(v, value) {
-			found = true
-		}
-	})
-	return found
+    found := false
+    m.inOrderTraversalMap(m.root, func(k K, v V) {
+        if !found && common.Equal(v, value) {
+            found = true
+        }
+    })
+    return found
 }
 
 // String returns the string representation of the map

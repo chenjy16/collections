@@ -1,12 +1,11 @@
 package maps
 
 import (
-	"fmt"
-	"reflect"
-	"strings"
-	"sync"
+    "fmt"
+    "strings"
+    "sync"
 
-	"github.com/chenjianyu/collections/container/common"
+    "github.com/chenjianyu/collections/container/common"
 )
 
 // ConcurrentHashMap is a thread-safe hash map implementation
@@ -274,18 +273,18 @@ func (chm *ConcurrentHashMap[K, V]) Values() []V {
 }
 
 // Entries returns a collection view of the key-value pairs contained in this map
-func (chm *ConcurrentHashMap[K, V]) Entries() []Pair[K, V] {
-	var entries []Pair[K, V]
-	for _, segment := range chm.segments {
-		segment.mutex.RLock()
-		for _, bkt := range segment.buckets {
-			for current := bkt.next; current != nil; current = current.next {
-				entries = append(entries, Pair[K, V]{Key: current.key, Value: current.value})
-			}
-		}
-		segment.mutex.RUnlock()
-	}
-	return entries
+func (chm *ConcurrentHashMap[K, V]) Entries() []common.Entry[K, V] {
+    var entries []common.Entry[K, V]
+    for _, segment := range chm.segments {
+        segment.mutex.RLock()
+        for _, bkt := range segment.buckets {
+            for current := bkt.next; current != nil; current = current.next {
+                entries = append(entries, common.NewEntry(current.key, current.value))
+            }
+        }
+        segment.mutex.RUnlock()
+    }
+    return entries
 }
 
 // ForEach performs the given action for each key-value pair in this map
@@ -506,7 +505,7 @@ func (chm *ConcurrentHashMap[K, V]) hash(key K) uint32 {
 
 // valueEquals compares two values for equality
 func (chm *ConcurrentHashMap[K, V]) valueEquals(a, b V) bool {
-	return reflect.DeepEqual(a, b)
+    return common.Equal(a, b)
 }
 
 // resizeSegment resizes the specified segment

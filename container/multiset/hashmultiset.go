@@ -232,12 +232,16 @@ func (ms *HashMultiset[E]) ToSlice() []E {
 
 // Iterator returns an iterator over the multiset elements
 func (ms *HashMultiset[E]) Iterator() common.Iterator[E] {
-	return &hashMultisetIterator[E]{
-		multiset: ms,
-		entries:  ms.EntrySet(),
-		index:    0,
-		current:  0,
-	}
+    return &baseMultisetIterator[E]{
+        entries: ms.EntrySet(),
+        index:   0,
+        current: 0,
+        removeFunc: func(elem E) bool {
+            ms.Remove(elem)
+            return true
+        },
+        refresh: func() []Entry[E] { return ms.EntrySet() },
+    }
 }
 
 // ForEach executes the given function for each element in the multiset

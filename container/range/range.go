@@ -2,8 +2,9 @@
 package ranges
 
 import (
-	"fmt"
-	"log"
+    "fmt"
+    "log"
+    "github.com/chenjianyu/collections/container/common"
 )
 
 // BoundType represents the type of bound (open or closed)
@@ -138,8 +139,11 @@ type RangeMap[K comparable, V any] interface {
 	// Span returns the minimal range enclosing the ranges in this RangeMap
 	Span() (Range[K], bool)
 	
-	// SubRangeMap returns a view of the portion of this range map that intersects with range
-	SubRangeMap(range_ Range[K]) RangeMap[K, V]
+    // SubRangeMap returns a view of the portion of this range map that intersects with range
+    SubRangeMap(range_ Range[K]) RangeMap[K, V]
+
+    // Entries returns all range-value pairs as common entries with Range[K] as key
+    Entries() []common.Entry[Range[K], V]
 }
 
 // Entry represents a range-value pair in a RangeMap
@@ -158,8 +162,12 @@ type Comparator[T any] func(a, b T) int
 
 // DefaultComparator provides a default comparison function for comparable types
 func DefaultComparator[T comparable](a, b T) int {
-	switch any(a).(type) {
-	case int:
+    // Prefer Comparable.CompareTo if available
+    if comparableA, ok := any(a).(interface{ CompareTo(interface{}) int }); ok {
+        return comparableA.CompareTo(any(b))
+    }
+    switch any(a).(type) {
+        case int:
 		aInt, bInt := any(a).(int), any(b).(int)
 		if aInt < bInt {
 			return -1
@@ -269,4 +277,16 @@ func DefaultComparator[T comparable](a, b T) int {
 		log.Printf("Warning: no default comparator available for type %T", a)
 		return 0 // Return 0 to indicate equality as fallback
 	}
+}
+
+// ComparatorFromStrategy adapts a common.ComparatorStrategy to a ranges Comparator function.
+// This allows ordered range structures to accept a unified comparator strategy.
+func ComparatorFromStrategy[T comparable](strategy common.ComparatorStrategy[T]) Comparator[T] {
+    if strategy == nil {
+        // Fallback to default comparator when no strategy provided
+        return DefaultComparator[T]
+    }
+    return func(a, b T) int {
+        return strategy.Compare(a, b)
+    }
 }

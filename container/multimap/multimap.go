@@ -2,12 +2,25 @@
 package multimap
 
 import (
-	"github.com/chenjianyu/collections/container/common"
+    "github.com/chenjianyu/collections/container/common"
 )
 
 // Multimap represents a collection that maps keys to multiple values
 type Multimap[K comparable, V comparable] interface {
-	common.Container[K]
+    // Size returns the number of key-value mappings in this multimap
+    Size() int
+
+    // IsEmpty returns true if this multimap contains no key-value mappings
+    IsEmpty() bool
+
+    // Clear removes all key-value mappings from this multimap
+    Clear()
+
+    // Contains returns true if this multimap contains the specified key
+    Contains(key K) bool
+
+    // String returns the string representation of this multimap
+    String() string
 
 	// Put adds a key-value mapping to this multimap
 	// Returns true if the multimap changed
@@ -45,11 +58,11 @@ type Multimap[K comparable, V comparable] interface {
 	// Keys returns all distinct keys in this multimap
 	Keys() []K
 
-	// Values returns all values in this multimap
-	Values() []V
+    // Values returns all values in this multimap
+    Values() []V
 
-	// Entries returns all key-value pairs in this multimap
-	Entries() []Entry[K, V]
+    // Entries returns all key-value pairs in this multimap
+    Entries() []common.Entry[K, V]
 
 	// KeySet returns a set view of the distinct keys in this multimap
 	KeySet() []K
@@ -61,8 +74,4 @@ type Multimap[K comparable, V comparable] interface {
 	ForEach(func(K, V))
 }
 
-// Entry represents a key-value pair in a multimap
-type Entry[K comparable, V comparable] struct {
-	Key   K
-	Value V
-}
+// Deprecated compatibility alias removed; use common.Entry/common.NewEntry directly.

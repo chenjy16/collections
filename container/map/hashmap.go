@@ -1,9 +1,10 @@
 package maps
 
 import (
-	"fmt"
-	"strings"
-	"sync"
+    "fmt"
+    "strings"
+    "sync"
+    "github.com/chenjianyu/collections/container/common"
 )
 
 // Use existing color type as node color
@@ -45,20 +46,22 @@ type LinkedHashMapNode[K comparable, V any] struct {
 
 // LinkedHashMap is a Map implementation based on separate chaining and red-black trees
 type LinkedHashMap[K comparable, V any] struct {
-	table     []*LinkedHashMapNode[K, V] // Hash bucket array
-	size      int                        // Element count
-	threshold int                        // Resize threshold
-	mutex     sync.RWMutex               // Read-write lock for thread safety
+    table     []*LinkedHashMapNode[K, V] // Hash bucket array
+    size      int                        // Element count
+    threshold int                        // Resize threshold
+    mutex     sync.RWMutex               // Read-write lock for thread safety
+    hashStrategy common.HashStrategy[K]  // Pluggable hash/equality strategy
 }
 
 // NewLinkedHashMap creates a new LinkedHashMap
 func NewLinkedHashMap[K comparable, V any]() *LinkedHashMap[K, V] {
-	capacity := initialCapacity
-	return &LinkedHashMap[K, V]{
-		table:     make([]*LinkedHashMapNode[K, V], capacity),
-		size:      0,
-		threshold: int(float64(capacity) * loadFactor),
-	}
+    capacity := initialCapacity
+    return &LinkedHashMap[K, V]{
+        table:     make([]*LinkedHashMapNode[K, V], capacity),
+        size:      0,
+        threshold: int(float64(capacity) * loadFactor),
+        hashStrategy: common.NewComparableHashStrategy[K](),
+    }
 }
 
 // NewLinkedHashMapWithCapacity creates a LinkedHashMap with specified initial capacity
@@ -70,11 +73,37 @@ func NewLinkedHashMapWithCapacity[K comparable, V any](capacity int) *LinkedHash
 		capacity = tableSizeFor(capacity)
 	}
 
-	return &LinkedHashMap[K, V]{
-		table:     make([]*LinkedHashMapNode[K, V], capacity),
-		size:      0,
-		threshold: int(float64(capacity) * loadFactor),
-	}
+    return &LinkedHashMap[K, V]{
+        table:     make([]*LinkedHashMapNode[K, V], capacity),
+        size:      0,
+        threshold: int(float64(capacity) * loadFactor),
+        hashStrategy: common.NewComparableHashStrategy[K](),
+    }
+}
+// NewLinkedHashMapWithHashStrategy creates a new LinkedHashMap with a custom HashStrategy
+func NewLinkedHashMapWithHashStrategy[K comparable, V any](strategy common.HashStrategy[K]) *LinkedHashMap[K, V] {
+    capacity := initialCapacity
+    return &LinkedHashMap[K, V]{
+        table:        make([]*LinkedHashMapNode[K, V], capacity),
+        size:         0,
+        threshold:    int(float64(capacity) * loadFactor),
+        hashStrategy: strategy,
+    }
+}
+
+// NewLinkedHashMapWithCapacityAndHashStrategy creates a LinkedHashMap with capacity and custom HashStrategy
+func NewLinkedHashMapWithCapacityAndHashStrategy[K comparable, V any](capacity int, strategy common.HashStrategy[K]) *LinkedHashMap[K, V] {
+    if capacity < initialCapacity {
+        capacity = initialCapacity
+    } else {
+        capacity = tableSizeFor(capacity)
+    }
+    return &LinkedHashMap[K, V]{
+        table:        make([]*LinkedHashMapNode[K, V], capacity),
+        size:         0,
+        threshold:    int(float64(capacity) * loadFactor),
+        hashStrategy: strategy,
+    }
 }
 
 // tableSizeFor returns the smallest power of 2 greater than or equal to cap
@@ -91,7 +120,7 @@ func tableSizeFor(cap int) int {
 
 // hash calculates the hash value of the key
 func (m *LinkedHashMap[K, V]) hash(key K) uint64 {
-	return Hash(key)
+    return m.hashStrategy.Hash(key)
 }
 
 // Put associates the specified value with the specified key in this map
@@ -135,11 +164,11 @@ func (m *LinkedHashMap[K, V]) Put(key K, value V) (V, bool) {
 		count++
 
 		// If same key is found, update value
-		if p.hash == hashValue && Equal(p.key, key) {
-			oldValue = p.value
-			p.value = value
-			return oldValue, true
-		}
+        if p.hash == hashValue && m.hashStrategy.Equals(p.key, key) {
+            oldValue = p.value
+            p.value = value
+            return oldValue, true
+        }
 
 		prev = p
 		p = p.next
@@ -180,15 +209,15 @@ func (m *LinkedHashMap[K, V]) putTreeVal(index int, key K, value V, hash uint64)
 			cmp = -1
 		} else if p.hash < hash {
 			cmp = 1
-		} else if Equal(key, p.key) {
-			// Found same key, update value
-			oldValue = p.value
-			p.value = value
-			return oldValue, true
-		} else {
-			// Same hash but different key, use key comparison
-			cmp = Compare(key, p.key)
-		}
+        } else if m.hashStrategy.Equals(key, p.key) {
+            // Found same key, update value
+            oldValue = p.value
+            p.value = value
+            return oldValue, true
+        } else {
+            // Same hash but different key, use key comparison
+            cmp = common.CompareGeneric(key, p.key)
+        }
 
 		// Decide left or right based on comparison result
 		if cmp < 0 {
@@ -426,11 +455,11 @@ func (m *LinkedHashMap[K, V]) buildTree(head *LinkedHashMapNode[K, V]) *LinkedHa
 					dir = -1
 				} else if h > ph {
 					dir = 1
-				} else if Equal(k, pk) {
-					dir = 0
-				} else {
-					dir = Compare(k, pk)
-				}
+                } else if m.hashStrategy.Equals(k, pk) {
+                    dir = 0
+                } else {
+                    dir = common.CompareGeneric(k, pk)
+                }
 
 				if dir < 0 {
 					if cur.left == nil {
@@ -701,9 +730,9 @@ func (m *LinkedHashMap[K, V]) insertNodeSimple(root **LinkedHashMapNode[K, V], n
 			cmp = -1
 		} else if node.hash > p.hash {
 			cmp = 1
-		} else {
-			cmp = Compare(node.key, p.key)
-		}
+        } else {
+            cmp = common.CompareGeneric(node.key, p.key)
+        }
 
 		if cmp < 0 {
 			if p.left == nil {
@@ -734,9 +763,9 @@ func (m *LinkedHashMap[K, V]) Get(key K) (V, bool) {
 	index := int(hashValue % uint64(len(m.table)))
 
 	// If bucket is empty, return zero value
-	if m.table[index] == nil {
-		return *new(V), false
-	}
+    if m.table[index] == nil {
+        return common.ZeroValue[V](), false
+    }
 
 	// If it's a tree node, use tree search
 	if m.table[index].isTreeNode {
@@ -745,14 +774,14 @@ func (m *LinkedHashMap[K, V]) Get(key K) (V, bool) {
 
 	// Linked list search
 	p := m.table[index]
-	for p != nil {
-		if p.hash == hashValue && Equal(p.key, key) {
-			return p.value, true
-		}
-		p = p.next
-	}
+    for p != nil {
+        if p.hash == hashValue && m.hashStrategy.Equals(p.key, key) {
+            return p.value, true
+        }
+        p = p.next
+    }
 
-	return *new(V), false
+    return common.ZeroValue[V](), false
 }
 
 // getTreeVal search node in red-black tree
@@ -766,13 +795,13 @@ func (m *LinkedHashMap[K, V]) getTreeVal(root *LinkedHashMapNode[K, V], key K, h
 			cmp = -1
 		} else if p.hash < hash {
 			cmp = 1
-		} else if Equal(key, p.key) {
-			// Find same key, return value
-			return p.value, true
-		} else {
-			// Hash same but different key, use key comparison
-			cmp = Compare(key, p.key)
-		}
+        } else if m.hashStrategy.Equals(key, p.key) {
+            // Find same key, return value
+            return p.value, true
+        } else {
+            // Hash same but different key, use key comparison
+            cmp = common.CompareGeneric(key, p.key)
+        }
 
 		// Decide left or right based on comparison result
 		if cmp < 0 {
@@ -782,7 +811,7 @@ func (m *LinkedHashMap[K, V]) getTreeVal(root *LinkedHashMapNode[K, V], key K, h
 		}
 	}
 
-	return *new(V), false
+    return common.ZeroValue[V](), false
 }
 
 // Remove if exists, removes mapping relationship for the key
@@ -794,9 +823,9 @@ func (m *LinkedHashMap[K, V]) Remove(key K) (V, bool) {
 	index := int(hashValue % uint64(len(m.table)))
 
 	// If bucket is empty, return zero value
-	if m.table[index] == nil {
-		return *new(V), false
-	}
+    if m.table[index] == nil {
+        return common.ZeroValue[V](), false
+    }
 
 	// If it's a tree node, use tree delete
 	if m.table[index].isTreeNode {
@@ -807,10 +836,10 @@ func (m *LinkedHashMap[K, V]) Remove(key K) (V, bool) {
 	p := m.table[index]
 	var prev *LinkedHashMapNode[K, V]
 
-	for p != nil {
-		if p.hash == hashValue && Equal(p.key, key) {
-			// Find node to delete
-			oldValue := p.value
+    for p != nil {
+        if p.hash == hashValue && m.hashStrategy.Equals(p.key, key) {
+            // Find node to delete
+            oldValue := p.value
 
 			if prev == nil {
 				// Delete list head
@@ -828,7 +857,7 @@ func (m *LinkedHashMap[K, V]) Remove(key K) (V, bool) {
 		p = p.next
 	}
 
-	return *new(V), false
+    return common.ZeroValue[V](), false
 }
 
 // removeTreeNode remove node from red-black tree
@@ -843,13 +872,13 @@ func (m *LinkedHashMap[K, V]) removeTreeNode(index int, key K, hash uint64) (V, 
 			cmp = -1
 		} else if p.hash < hash {
 			cmp = 1
-		} else if Equal(key, p.key) {
-			// Find node to delete
-			break
-		} else {
-			// Hash same but different key, use key comparison
-			cmp = Compare(key, p.key)
-		}
+        } else if m.hashStrategy.Equals(key, p.key) {
+            // Find node to delete
+            break
+        } else {
+            // Hash same but different key, use key comparison
+            cmp = common.CompareGeneric(key, p.key)
+        }
 
 		// Decide left or right based on comparison result
 		if cmp < 0 {
@@ -860,9 +889,9 @@ func (m *LinkedHashMap[K, V]) removeTreeNode(index int, key K, hash uint64) (V, 
 	}
 
 	// If node is not found, return zero value
-	if p == nil {
-		return *new(V), false
-	}
+    if p == nil {
+        return common.ZeroValue[V](), false
+    }
 
 	oldValue := p.value
 
@@ -1017,9 +1046,9 @@ func (m *LinkedHashMap[K, V]) ContainsValue(value V) bool {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 
-	return m.traverseAllWithEarlyExit(func(node *LinkedHashMapNode[K, V]) bool {
-		return Equal(node.value, value)
-	})
+    return m.traverseAllWithEarlyExit(func(node *LinkedHashMapNode[K, V]) bool {
+        return common.Equal(node.value, value)
+    })
 }
 
 // Size returns the number of key-value mapping relationships in this mapping
@@ -1217,14 +1246,14 @@ func (m *LinkedHashMap[K, V]) String() string {
 }
 
 // Entries returns the mapping relationships contained in this mapping
-func (m *LinkedHashMap[K, V]) Entries() []Pair[K, V] {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
+func (m *LinkedHashMap[K, V]) Entries() []common.Entry[K, V] {
+    m.mutex.RLock()
+    defer m.mutex.RUnlock()
 
-	entries := make([]Pair[K, V], 0, m.size)
-	m.traverseAll(func(node *LinkedHashMapNode[K, V]) {
-		entries = append(entries, NewPair(node.key, node.value))
-	})
+    entries := make([]common.Entry[K, V], 0, m.size)
+    m.traverseAll(func(node *LinkedHashMapNode[K, V]) {
+        entries = append(entries, common.NewEntry(node.key, node.value))
+    })
 
-	return entries
+    return entries
 }
